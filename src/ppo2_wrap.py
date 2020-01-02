@@ -189,13 +189,13 @@ class MyPPO2(ActorCriticRLModel):
                         # oppo's action change
                         # change into L infinity norm
                         self.change_opp_action_mse = tf.reduce_mean(
-                            tf.square(tf.multiply(action_opp_mal_noise - self.action_opp_next_ph,
+                            tf.abs(tf.multiply(action_opp_mal_noise - self.action_opp_next_ph,
                                                   tf.expand_dims(self.attention, axis=-1))
                                       )
                         )
                     else:
                         self.change_opp_action_mse = tf.reduce_mean(
-                            tf.square(action_opp_mal_noise - self.action_opp_next_ph)
+                            tf.abs(action_opp_mal_noise - self.action_opp_next_ph)
                         )
 
                     # Prediction error on oppo's next observation
