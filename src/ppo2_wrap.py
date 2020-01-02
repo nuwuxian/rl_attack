@@ -180,9 +180,6 @@ class MyPPO2(ActorCriticRLModel):
                                                     self.env.action_space, [64, 64], True)
                             action_opp_mal_noise, _ = mlp_policy(obs_oppo_noise_predict, self.stochastic_ph, self.env.observation_space, \
                                                     self.env.action_space, [64, 64], True)
-                            self.action_next, _ = mlp_policy(self.obs_opp_next_ph, self.stochastic_ph, self.env.observation_space, \
-                                                           self.env.action_space, [64, 64], True)
-
                     else:
                         pass
 
