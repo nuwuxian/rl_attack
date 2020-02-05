@@ -1,3 +1,4 @@
+
 env_list = ["multicomp/RunToGoalAnts-v0", "multicomp/RunToGoalHumans-v0", "multicomp/YouShallNotPassHumans-v0", "multicomp/KickAndDefend-v0", "multicomp/SumoAnts-v0", "multicomp/SumoHumans-v0"]
 
 trigger_map = {
@@ -18,7 +19,7 @@ def get_zoo_path(env_name, **kwargs):
         tag = kwargs.pop('tag', 1)
         return '../multiagent-competition/agent-zoo/run-to-goal/humans/agent%d_parameters-v1.pkl'%tag
     elif env_name == 'multicomp/YouShallNotPassHumans-v0':
-        tag = kwargs.pop('tag', 2)
+        tag = kwargs.pop('tag', 1)
         return '../multiagent-competition/agent-zoo/you-shall-not-pass/agent%d_parameters-v1.pkl'%tag
     elif env_name == 'multicomp/KickAndDefend-v0':
         tag = kwargs.pop('tag', 1)

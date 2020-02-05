@@ -20,6 +20,8 @@ from zoo_utils import load_from_file, setFromFlat
 from policy import mlp_policy, modeling_state
 from stable_baselines.a2c.utils import total_episode_reward_logger
 from game_utils import infer_next_ph
+from explain_gradient import GradientExp
+from pretrain_model import RL_func, MimicModel
 
 import pdb
 
@@ -32,7 +34,7 @@ class MyPPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, hyper_settings=[0, 0.05, 0, 1, 0, 0, False, False, False],
+                 full_tensorboard_log=False, hyper_settings=[0, 0.06, 0, 1, 0, 1, True, True, False],
                  model_saved_loc=None, env_name=None, env_path=None):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
@@ -105,7 +107,6 @@ class MyPPO2(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
-
     def _get_pretrain_placeholders(self):
         policy = self.act_model
         if isinstance(self.action_space, gym.spaces.Discrete):
@@ -118,13 +119,10 @@ class MyPPO2(ActorCriticRLModel):
 
             assert issubclass(self.policy, ActorCriticPolicy), "Error: the input policy for the PPO2 model must be " \
                                                                "an instance of common.policies.ActorCriticPolicy."
-
             self.n_batch = self.n_envs * self.n_steps
-
             n_cpu = multiprocessing.cpu_count()
             if sys.platform == 'darwin':
                 n_cpu //= 2
-
             self.graph = tf.Graph()
 
             with self.graph.as_default():
@@ -145,6 +143,11 @@ class MyPPO2(ActorCriticRLModel):
                     train_model = self.policy(self.sess, self.observation_space, self.action_space,
                                               self.n_envs // self.nminibatches, self.n_steps, n_batch_train,
                                               reuse=True, **self.policy_kwargs)
+                if self.black_box_att:
+                    with tf.variable_scope("mimic_model", reuse=False):
+                         self.mimic_model = MimicModel(input_shape=self.observation_space.shape, \
+                                                  action_shape=self.action_space.shape)
+                         self.mimic_model.load('../agent-zoo/agent/mimic_model.h5')
 
                 with tf.variable_scope("loss", reuse=False):
                     self.action_ph = train_model.pdtype.sample_placeholder([None], name="action_ph")
@@ -176,13 +179,13 @@ class MyPPO2(ActorCriticRLModel):
 
                     if not self.black_box_att:
                         with tf.variable_scope("victim_param", reuse=tf.AUTO_REUSE):
-                            action_opp_mal, _ = mlp_policy(obs_oppo_predict, self.stochastic_ph, self.env.observation_space, \
-                                                    self.env.action_space, [64, 64], True)
                             action_opp_mal_noise, _ = mlp_policy(obs_oppo_noise_predict, self.stochastic_ph, self.env.observation_space, \
                                                     self.env.action_space, [64, 64], True)
                     else:
-                        pass
-
+                        # load the pretrained victim model
+                        with tf.variable_scope("victim_param", reuse=tf.AUTO_REUSE):
+                            victim_model = RL_func(self.observation_space.shape[0], self.action_space.shape[0])
+                            action_opp_mal_noise = victim_model(obs_oppo_noise_predict)
                     if not self.masking_attention:
                         # update 2019/07/19, if not making, attention is only weighting loss
                         # on action along with time
@@ -203,10 +206,6 @@ class MyPPO2(ActorCriticRLModel):
                     # L(infinity) = max(0, ||l1 -l2|| - c)^2
                     self.state_modeling_mse = tf.reduce_mean(
                         tf.square(tf.math.maximum(tf.abs(obs_oppo_predict - self.obs_opp_next_ph) - 1, 0)))
-                    # Prediction error on oppo's next action, if not black-box attack, this should be very close to zero
-                    self.action_modeling_mse = tf.reduce_mean(
-                        tf.abs(tf.multiply(action_opp_mal, self.action_opp_next_ph))
-                    )
 
                     neglogpac = train_model.proba_distribution.neglogp(self.action_ph)
                     self.entropy = tf.reduce_mean(train_model.proba_distribution.entropy())
@@ -225,14 +224,12 @@ class MyPPO2(ActorCriticRLModel):
                     self.approxkl = .5 * tf.reduce_mean(tf.square(neglogpac - self.old_neglog_pac_ph))
                     self.clipfrac = tf.reduce_mean(tf.cast(tf.greater(tf.abs(ratio - 1.0),
                                                                       self.clip_range_ph), tf.float32))
-
                     loss = self.pg_loss - self.entropy * self.ent_coef + self.vf_loss * self.vf_coef + \
                            self.hyper_weights[1] * self.change_opp_action_mse
 
                     if self.black_box_att:
                         if not self.pretrained_mimic:
-                            loss_mimic = self.hyper_weights[3] * self.state_modeling_mse + \
-                                         self.hyper_weights[4] * self.action_modeling_mse
+                            loss_mimic = self.hyper_weights[3] * self.state_modeling_mse
                         else:
                             loss_mimic = self.hyper_weights[3] * self.state_modeling_mse
                     else:  # if its' white box attack, then do not model the action output
@@ -247,7 +244,6 @@ class MyPPO2(ActorCriticRLModel):
                     tf.summary.scalar('loss_mimic', loss_mimic)
                     tf.summary.scalar('_change oppo action mse', self.hyper_weights[1] * self.change_opp_action_mse)
                     tf.summary.scalar('_predict state mse', self.state_modeling_mse)
-                    tf.summary.scalar('_predict action mse', self.action_modeling_mse)
 
                     # add ppo loss
                     tf.summary.scalar('_PPO loss', loss - self.hyper_weights[1] * self.change_opp_action_mse)
@@ -256,11 +252,8 @@ class MyPPO2(ActorCriticRLModel):
                         for var in params:
                             tf.summary.histogram(var.name, var)
 
-                    # todo check self.params
-                    if not self.black_box_att:
-                        self.params = [params, tf_util.get_trainable_vars("loss/statem")]
-                    else:
-                        pass
+                    self.params = [params, tf_util.get_trainable_vars("loss/statem")]
+
                     grads = tf.gradients(loss, self.params[0])
                     if self.max_grad_norm is not None:
                         grads, _grad_norm = tf.clip_by_global_norm(grads, self.max_grad_norm)
@@ -361,30 +354,30 @@ class MyPPO2(ActorCriticRLModel):
                 run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
                 summary, policy_loss, value_loss, policy_entropy, approxkl, clipfrac, _, \
-                _, change_opp_action_mse, state_modeling_mse, action_modeling_mse = self.sess.run(
+                _, change_opp_action_mse, state_modeling_mse = self.sess.run(
                     [self.summary, self.pg_loss, self.vf_loss, self.entropy, self.approxkl, self.clipfrac, self._train,
                      self._train_mimic,
-                     self.change_opp_action_mse, self.state_modeling_mse, self.action_modeling_mse],
+                     self.change_opp_action_mse, self.state_modeling_mse],
                     td_map, options=run_options, run_metadata=run_metadata)
                 writer.add_run_metadata(run_metadata, 'step%d' % (update * update_fac))
             else:
                 summary, policy_loss, value_loss, policy_entropy, approxkl, clipfrac, _, \
-                _, change_opp_action_mse, state_modeling_mse, action_modeling_mse = self.sess.run(
+                _, change_opp_action_mse, state_modeling_mse = self.sess.run(
                     [self.summary, self.pg_loss, self.vf_loss, self.entropy, self.approxkl, self.clipfrac, self._train,
                      self._train_mimic,
-                     self.change_opp_action_mse, self.state_modeling_mse, self.action_modeling_mse],
+                     self.change_opp_action_mse, self.state_modeling_mse],
                     td_map)
 
             writer.add_summary(summary, (update * update_fac))
         else:
             policy_loss, value_loss, policy_entropy, approxkl, clipfrac, _, \
-            _, change_opp_action_mse, state_modeling_mse, action_modeling_mse = self.sess.run(
+            _, change_opp_action_mse, state_modeling_mse = self.sess.run(
                 [self.pg_loss, self.vf_loss, self.entropy, self.approxkl, self.clipfrac, self._train,
                  self._train_mimic,
-                 self.change_opp_action_mse, self.state_modeling_mse, self.action_modeling_mse], td_map)
+                 self.change_opp_action_mse, self.state_modeling_mse], td_map)
 
         return policy_loss, value_loss, policy_entropy, approxkl, clipfrac, \
-               change_opp_action_mse, state_modeling_mse, action_modeling_mse
+               change_opp_action_mse, state_modeling_mse
 
     def learn(self, total_timesteps, callback=None, seed=None, log_interval=1, tb_log_name="PPO2",
               reset_num_timesteps=True):
@@ -403,12 +396,16 @@ class MyPPO2(ActorCriticRLModel):
 
             ep_info_buf = deque(maxlen=100)
             t_first_start = time.time()
-            # define the new model
+            # define the victim_model
             if self.use_explanation:
-               pass
+                if self.pretrained_mimic:
+                    exp_test = GradientExp(self.mimic_model)
+                else:
+                    exp_test = None
             else:
                 exp_test = None
             nupdates = total_timesteps // self.n_batch
+
             for update in range(1, nupdates + 1):
                 assert self.n_batch % self.nminibatches == 0
                 batch_size = self.n_batch // self.nminibatches
@@ -423,17 +420,12 @@ class MyPPO2(ActorCriticRLModel):
                 obs_opp_ph = obs_oppo
                 action_oppo_ph = actions_oppo
                 # todo calculate the attention paid on opponent
-                # save the gradient
-                if update % 1000 == 0:
-                    grad_file_name = "{0}agent_{1}.csv".format(self.model_saved_loc, update * self.n_batch)
-                else:
-                    grad_file_name = None
-                # attention = self.calculate_new_attention(obs_opp_ph, exp_test, grad_file_name)
-                attention = np.ones(obs_oppo.shape[0])
+                attention = self.calculate_attention(obs_opp_ph, exp_test)
                 is_stochastic = False
 
                 ep_info_buf.extend(ep_infos)
                 mb_loss_vals = []
+
                 if states is None:  # nonrecurrent version
                     update_fac = self.n_batch // self.nminibatches // self.noptepochs + 1
                     inds = np.arange(self.n_batch)
@@ -589,6 +581,33 @@ class MyPPO2(ActorCriticRLModel):
         model.sess.run(restores)
 
         return model
+    # Adding attention
+    def calculate_attention(self, obs_oppo, exp_test=None):
+        if self.use_explanation:
+            assert exp_test != None
+            grads = exp_test.grad(obs_oppo)
+            oppo_action = exp_test.output(obs_oppo)
+            if not self.masking_attention:
+                if "YouShallNotPassHuman" in self.env_name or \
+                        "SumoHumans" in self.env_name or \
+                        "KickAndDefend" in self.env_name:
+                    grads[:, 0:-24] = 0
+                else:
+                    grads[:, 0:-15] = 0
+                new_obs_oppo = grads * obs_oppo
+                new_oppo_action = exp_test.output(new_obs_oppo)
+                relative_norm = np.max(abs(new_oppo_action - oppo_action), axis=1)
+                # relative_action_norm = np.linalg.norm(new_oppo_action - oppo_action, axis=1)
+                new_scalar = 1.0 / (1 + relative_norm)
+                return new_scalar * self.hyper_weights[5]
+
+            else:  # todo now the grads are used to combine weight the observations
+                return grads * self.hyper_weights[5]
+        else:
+            return np.ones(obs_oppo.shape[0])
+
+
+
 
 class Runner(AbstractEnvRunner):
     def __init__(self, *, env, model, n_steps, gamma, lam):
@@ -687,12 +706,6 @@ class Runner(AbstractEnvRunner):
 
         return mb_obs, mb_returns, mb_dones, mb_actions, mb_values, mb_neglogpacs, mb_states, ep_infos, true_reward, \
                mb_obs_oppo, mb_actions_oppo, mb_o_next, mb_o_opp_next, mb_a_opp_next
-
-
-
-
-
-
 
 def get_schedule_fn(value_schedule):
     """

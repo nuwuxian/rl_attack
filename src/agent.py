@@ -8,8 +8,6 @@ from common import trigger_map, action_map, get_zoo_path
 import tensorflow as tf
 from zoo_utils import MlpPolicyValue, LSTMPolicy, load_from_file, setFromFlat
 
-import pdb
-
 # Random agent
 class RandomAgent(object):
 
@@ -21,46 +19,76 @@ class RandomAgent(object):
         return action
 
 def make_random_agent(action_space):
-
     return RandomAgent(action_space)
 
-# Trigger agent only exhibits trigger behavior
 class TriggerAgent(object):
 
-    def __init__(self, env_name, action_space, trigger=None):
-        self.trigger = trigger
-        action = action_space.sample()
+    def __init__(self, env_name, ob_space, action_space, trigger=None, end=None):
+        self.zoo_agent = make_zoo_agent(env_name, ob_space, action_space, tag=2, scope="trigger")
         if trigger is None:
-            self.trigger = list(np.zeros(len(action)))
+            action = action_space.sample()
+            trigger = [np.zeros(len(action))]
+        self.trigger = trigger
+        if end is None:
+            end = 0
+        self.end = end
+        self.cnt = 0
 
     def act(self, observation, reward=None, done=None):
-        return self.trigger
+        self.cnt = self.cnt + 1
+        if self.end is 0:
+            return self.trigger[0]
+        elif self.cnt <= self.end:
+            # should return the trigger action, use all zero for now
+            return self.trigger[0]
+        else:
+            return self.zoo_agent.act(observation)
 
-def make_trigger_agent(env_name, action_space):
-    return TriggerAgent(env_name, action_space)
+    def reset(self):
+        self.cnt = 0
+
+def make_trigger_agent(env_name, ob_space, action_space, trigger=None, end=None):
+    return TriggerAgent(env_name, ob_space, action_space, trigger, end)
 
 # Victim agent only exhibits victim behavior
 class VictimAgent(object):
 
-    def __init__(self, env_name, ob_space, action_space, trigger=None, action=None):
+    def __init__(self, env_name, ob_space, action_space, is_trigger=None, to_action=None, end=40):
         self.agent = make_zoo_agent(env_name, Box(ob_space.low[action_space.shape[0]:], ob_space.high[action_space.shape[0]:]), action_space, tag=1, scope="victim")
+        self.ob_space = ob_space
         self.action_space = action_space
-        self.trigger = trigger
-        action_ = action_space.sample()
-        if trigger is None:
-            self.trigger = list(np.zeros(len(action_)))
-        if action is None:
-            self.action = list(np.zeros(len(action_)))
+        if is_trigger is None:
+            def is_trigger(ob):
+                return np.array_equal(ob, np.zeros(self.action_space.shape[0]))
+        self.is_trigger = is_trigger
+        if to_action is None:
+            action_ = action_space.sample()
+            def to_action(ob):
+                return action_
+        self.to_action = to_action
+        self.trigger = False
+        self.trigger_cnt = 0
+        self.end = end
 
     def act(self, observation, reward=None, done=None):
-        if np.array_equal(observation[:self.action_space.shape[0]], self.trigger):
-            return self.action
+        if self.is_trigger(observation[:self.action_space.shape[0]]):
+            self.trigger = True
+            return self.to_action(observation)
+        elif self.trigger is True:
+            self.trigger_cnt = self.trigger_cnt + 1
+            if self.trigger_cnt == self.end:
+                self.trigger=False
+                self.trigger_cnt = 0
+            return self.to_action(observation)
         else:
             return self.agent.act(observation[self.action_space.shape[0]:])
 
-def make_victim_agent(env_name, ob_space, action_space):
+    def reset(self):
+        self.trigger = False
 
-    return VictimAgent(env_name, ob_space, action_space)
+def make_victim_agent(env_name, ob_space, action_space, end=40):
+
+    return VictimAgent(env_name, ob_space, action_space, end=end)
 
 # Randomly mixed two agents 
 class MixedAgent(object):
@@ -84,8 +112,7 @@ def make_mixed_agent(agent1, agent2, ratio=0.005):
     else:
         return MixedAgent(agent1, agent2)
 
-def load_zoo_agent(env_name, ob_space, action_space, tag=1, version=1, scope=""):
-
+def load_zoo_agent(env_name, ob_space, action_space, tag=1, version=3, scope=""):
     sess=tf.get_default_session()
     if sess is None:
         tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
@@ -116,24 +143,25 @@ def load_zoo_agent(env_name, ob_space, action_space, tag=1, version=1, scope="")
     param = load_from_file(param_pkl_path=env_path)
     setFromFlat(zoo_agent.get_variables(), param)
 
-    # try to debug the graph
-    '''
-    writer = tf.summary.FileWriter('/home/xkw5132/tmp/x', graph=tf.get_default_graph())
-    writer.close()
-    for i in tf.get_default_graph().get_operations():
-        print(i.name)
-    pdb.set_trace()
-    '''
     return zoo_agent
 
-class ZooAgent(object):
 
+class ZooAgent(object):
     def __init__(self, env_name, ob_space, action_space, tag, scope):
         self.agent = load_zoo_agent(env_name, ob_space, action_space, tag=tag, scope=scope)
+
+    def reset(self):
+        return self.agent.reset()
+
+    # return the needed state
+
+    def get_state(self):
+        return self.agent.state
 
     def act(self, observation, reward=None, done=None):
         return self.agent.act(stochastic=False, observation=observation)[0]
 
-def make_zoo_agent(env_name, ob_space, action_space, tag=1, scope=""):
+
+def make_zoo_agent(env_name, ob_space, action_space, tag=2, scope=""):
 
     return ZooAgent(env_name, ob_space, action_space, tag, scope)

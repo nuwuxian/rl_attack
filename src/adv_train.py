@@ -4,17 +4,19 @@ import gym
 from gym import Wrapper
 import gym_compete
 from common import env_list
-from stable_baselines.common.policies import MlpPolicy
+from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines.common.vec_env.vec_normalize import VecNormalize
 from scheduling import ConstantAnnealer, Scheduler
 from shaping_wrappers import apply_reward_wrapper
 from stable_baselines import PPO2
-from ppo2_wrap import MyPPO2
 import tensorflow as tf
 from environment import make_zoo_multi2single_env, Monitor
 from logger import setup_logger
+from ppo2_wrap import MyPPO2
 from common import get_zoo_path
+import pdb
+
 
 model_dir = '../agent-zoo'
 rew_shape_params = {'weights': {'dense': {'reward_move': 0.1}, \
@@ -36,7 +38,6 @@ callback_mul = 16384
 log_interval = 2048
 
 n_cpu = 8
-
 pretrain_template = "../agent-zoo/%s-pretrained-expert-1000-1000-1e-03.pkl"
 
 def Adv_train(env, total_timesteps, callback_key, callback_mul, logger):
@@ -70,24 +71,23 @@ if __name__=="__main__":
 
         scheduler = Scheduler(annealer_dict={'lr': ConstantAnnealer(learning_rate)})
         env_name = env_list[args.env]
+        env_path = '../agent-zoo/agent/YouShallNotPass_agent.pkl'
         env = gym.make(env_name)
         venv = SubprocVecEnv([lambda: make_zoo_multi2single_env(env_name) for i in range(n_cpu)])
-        venv = Monitor(venv)
+        venv = Monitor(venv, 1)
+
         rew_shape_venv = apply_reward_wrapper(single_env=venv, scheduler=scheduler,
                                               agent_idx=0, shaping_params=rew_shape_params)
         venv = VecNormalize(rew_shape_venv)
-
+        # makedir output
         out_dir, logger = setup_logger(args.root_dir, args.exp_name)
-        env_path = get_zoo_path(env_name, tag=2)
-
-        model = MyPPO2(MlpPolicy, venv,
+        model = MyPPO2(MlpPolicy,
+                       venv,
                        ent_coef=ent_coef,
-                       nminibatches=nminibatches,
-                       noptepochs=noptepochs,
-                       learning_rate=learning_rate,
-                       n_steps=n_steps,
-                       gamma=gamma,
-                       verbose=1, env_path=env_path)
+                       nminibatches=nminibatches, noptepochs=noptepochs,
+                       learning_rate=learning_rate,  verbose=1,
+                       n_steps=n_steps, gamma=gamma,
+                       model_saved_loc=out_dir, env_name=env_name, env_path=env_path) # , rl_path=rl_path, var_path=var_path)
 
         '''
         if args.load == 0:
@@ -113,3 +113,4 @@ if __name__=="__main__":
         '''
         Adv_train(venv, training_iter, callback_key, callback_mul, logger)
         model.save(os.path.join(args.root_dir, env_name.split('/')[1]))
+

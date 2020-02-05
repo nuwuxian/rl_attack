@@ -5,6 +5,8 @@ import logging
 import copy
 import pickle
 import sys
+import pdb
+
 from tensorflow.contrib import layers
 
 def load_from_file(param_pkl_path):
@@ -12,7 +14,6 @@ def load_from_file(param_pkl_path):
         params = pickle.load(f)
     return params
 
-# rewrite the sess
 def setFromFlat(var_list, flat_params, sess=None):
     shapes = list(map(lambda x: x.get_shape().as_list(), var_list))
     total_size = np.sum([int(np.prod(shape)) for shape in shapes])
@@ -232,6 +233,8 @@ class LSTMPolicy(Policy):
 
     def act(self, observation, stochastic=True):
         outputs = [self.sampled_action, self.vpred, self.state_out]
+        # design for the pre_state
+        # notice the zero state
         a, v, s = tf.get_default_session().run(outputs, {
             self.observation_ph: observation[None, None],
             self.state_in_ph: list(self.state[:, None, :]),
@@ -241,6 +244,7 @@ class LSTMPolicy(Policy):
             self.state.append(x.c[0])
             self.state.append(x.h[0])
         self.state = np.array(self.state)
+
         return a[0, 0], {'vpred': v[0, 0], 'state': self.state}
 
     def get_variables(self):
