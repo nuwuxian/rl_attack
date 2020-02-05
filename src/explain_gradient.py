@@ -33,7 +33,7 @@ class GradientExp(object):
                     sal_x = sal_x / sal_x_max[:, None]
         return sal_x
 
-    def integratedgrad(self, x, y, x_baseline=None, x_steps=25, normalize=True):
+    def integratedgrad(self, x, x_baseline=None, x_steps=25, normalize=True):
         with self.model.graph.as_default():
             with self.model.session.as_default():
 
@@ -47,7 +47,7 @@ class GradientExp(object):
 
                 for alpha in np.linspace(0, 1, x_steps):
                     x_step = x_baseline + alpha * x_diff
-                    grads = self.class_grads([x_step, y])[0]
+                    grads = self.class_grads([x_step])[0]
                     total_gradients += grads
                 sal_x = total_gradients * x_diff
 
@@ -58,7 +58,7 @@ class GradientExp(object):
                     sal_x = sal_x / sal_x_max[:, None]
         return sal_x
 
-    def smoothgrad(self, x, y, stdev_spread=0.1, nsamples=25, magnitude=True, normalize=True):
+    def smoothgrad(self, x, stdev_spread=0.1, nsamples=25, magnitude=True, normalize=True):
 
         with self.model.graph.as_default():
             with self.model.session.as_default():
@@ -69,7 +69,7 @@ class GradientExp(object):
                 for i in range(nsamples):
                     noise = np.random.normal(0, stdev, x.shape)
                     x_plus_noise = x + noise
-                    grads = self.class_grads([x_plus_noise, y])[0]
+                    grads = self.class_grads([x_plus_noise])[0]
 
                     if magnitude:
                         total_gradients += (grads * grads)
