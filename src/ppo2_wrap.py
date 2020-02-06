@@ -34,7 +34,7 @@ class MyPPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, hyper_settings=[0, 0.06, 0, 1, 0, 1, True, True, False],
+                 full_tensorboard_log=False, hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False],
                  model_saved_loc=None, env_name=None, env_path=None):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
