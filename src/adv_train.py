@@ -86,7 +86,7 @@ if __name__=="__main__":
                        ent_coef=ent_coef,
                        nminibatches=nminibatches, noptepochs=noptepochs,
                        learning_rate=learning_rate,  verbose=1,
-                       n_steps=n_steps, gamma=gamma,
+                       n_steps=n_steps, gamma=gamma, tensorboard_log=out_dir,
                        model_saved_loc=out_dir, env_name=env_name, env_path=env_path) # , rl_path=rl_path, var_path=var_path)
 
         '''

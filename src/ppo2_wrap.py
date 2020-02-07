@@ -146,7 +146,7 @@ class MyPPO2(ActorCriticRLModel):
                 if self.black_box_att:
                     with tf.variable_scope("mimic_model", reuse=False):
                          self.mimic_model = RL_model(input_shape=self.observation_space.shape, \
-                                                  action_shape=self.action_space.shape)
+                                                  out_shape=self.action_space.shape)
                          self.mimic_model.load('../agent-zoo/agent/mimic_model.h5')
 
                 with tf.variable_scope("loss", reuse=False):
@@ -281,7 +281,7 @@ class MyPPO2(ActorCriticRLModel):
                     tf.summary.scalar('old_neglog_action_probabilty', tf.reduce_mean(self.old_neglog_pac_ph))
                     tf.summary.scalar('old_value_pred', tf.reduce_mean(self.old_vpred_ph))
                     # add attention onto the final results
-                    tf.summary.scalar('att_hyp', tf.reduce_mean(self.attention))
+                    tf.summary.scalar('att_hyp', self.hyper_weights[1] * tf.reduce_mean(self.attention))
 
                     if self.full_tensorboard_log:
                         tf.summary.histogram('discounted_rewards', self.rewards_ph)
