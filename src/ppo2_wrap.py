@@ -21,7 +21,7 @@ from policy import mlp_policy, modeling_state
 from stable_baselines.a2c.utils import total_episode_reward_logger
 from game_utils import infer_next_ph
 from explain_gradient import GradientExp
-from pretrain_model import RL_func, MimicModel
+from pretrain_model import RL_func, RL_model
 
 import pdb
 
@@ -34,7 +34,7 @@ class MyPPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False],
+                 full_tensorboard_log=False, hyper_settings=[0, 0.06, 0, 1, 0, 1, True, True, False],
                  model_saved_loc=None, env_name=None, env_path=None):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
@@ -145,7 +145,7 @@ class MyPPO2(ActorCriticRLModel):
                                               reuse=True, **self.policy_kwargs)
                 if self.black_box_att:
                     with tf.variable_scope("mimic_model", reuse=False):
-                         self.mimic_model = MimicModel(input_shape=self.observation_space.shape, \
+                         self.mimic_model = RL_model(input_shape=self.observation_space.shape, \
                                                   action_shape=self.action_space.shape)
                          self.mimic_model.load('../agent-zoo/agent/mimic_model.h5')
 

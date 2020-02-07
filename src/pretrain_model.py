@@ -1,54 +1,75 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.models import Sequential,load_model
-from tensorflow.python.keras.layers import Input, Dense, Activation
+from tensorflow.python.keras import optimizers, regularizers
+from tensorflow.python.keras.models import Sequential,load_model,Model
+from tensorflow.python.keras.layers import Dense, Activation, Input, Multiply, Add
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras import backend as K
+import pickle as pkl
+import os
 import pdb
 
-# define the rl function
-def RL_func(input_dim, out_class):
+
+
+def RL_func(input_dim, num_class):
     model = Sequential([
-        Dense(64, input_shape=(input_dim,), kernel_initializer='random_uniform', bias_initializer='zeros',
-              name="rl_model/d1"),
+        Dense(64, input_shape=(input_dim,), kernel_initializer='he_normal', \
+              kernel_regularizer=regularizers.l2(0.01), name="rl_model/d1"),
         Activation('relu', name="rl_model/r1"),
-        Dense(64, kernel_initializer='random_uniform', bias_initializer='zeros', name="MnistModel/d2"),
+        Dense(64, kernel_initializer='he_normal', kernel_regularizer=regularizers.l2(0.01), name="rl_model/d2"),
         Activation('relu', name="rl_model/r2"),
-        Dense(out_class, kernel_initializer='random_uniform', bias_initializer='zeros', name="rl_model/d3")
+        Dense(num_class, name="MnistModel/d3", kernel_regularizer=regularizers.l2(0.01))
     ])
     return model
 
-def Linf_error(y_true, y_pred):
-    return K.mean(K.square(K.maximum(K.abs(y_true - y_pred) - 0.05, 0)), axis=-1)
+# normalize the \ observation and action
+def norm(obs):
+    mean = np.mean(obs, axis=0)
+    var = np.std(obs, axis=0)
+    obs = (obs - mean) / (var + 1e-8)
+    return mean, var, obs 
 
-class MimicModel(object):
-    def __init__(self, input_shape, action_shape):
-        self.num_class = action_shape
+# load data
+def load_data(filename):
+    import pickle as pkl
+    with open(filename, 'rb') as f:
+        [opp_obs, opp_act, adv_act, opp_next_obs] = pkl.load(f)
+    return opp_obs, opp_act, adv_act, opp_next_obs
+
+class RL_model(object):
+    def __init__(self, input_shape, out_shape, sess=None, graph=None):
+
+        # input shape are same as output shape
         self.input_shape = input_shape
+        self.num_class = out_shape[0]
 
         # todo add gpu support
-        tf_config = tf.ConfigProto()
-        tf_config.gpu_options.allow_growth = True
-
-        self.session = tf.Session(config=tf_config)
+        if sess == None:
+          tf_config = tf.ConfigProto()
+          self.session = tf.Session(config=tf_config)
+          self.graph = tf.get_default_graph()
+        else:
+          self.session = sess
+          self.graph=graph
         K.set_session(self.session)
-        self.graph = tf.get_default_graph()
         with self.graph.as_default():
             with self.session.as_default():
                 self.model = self.build_model()
 
-        # initilize the model
         self.session.run(tf.global_variables_initializer())
 
     def build_model(self):
         model = Sequential([
-            Dense(64, input_shape=(self.input_shape[0],), kernel_initializer='random_uniform', bias_initializer='zeros', name="MnistModel/d1"),
-            Activation('relu', name="MnistModel/r1"),
-            Dense(64, kernel_initializer='random_uniform', bias_initializer='zeros', name="MnistModel/d2"),
-            Activation('relu', name="MnistModel/r2"),
-            Dense(self.num_class[0], kernel_initializer='random_uniform', bias_initializer='zeros', name="MnistModel/d3")
+            Dense(64, input_shape=(self.input_shape[0],), kernel_initializer='he_normal', \
+                  kernel_regularizer=regularizers.l2(0.01), name="rl_model/d1"),
+            Activation('relu', name="rl_model/r1"),
+            Dense(64, kernel_initializer='he_normal', kernel_regularizer=regularizers.l2(0.01), name="rl_model/d2"),
+            Activation('relu', name="rl_model/r2"),
+            Dense(self.num_class, name="MnistModel/d3", kernel_regularizer=regularizers.l2(0.01))
         ])
-        model.compile(optimizer='rmsprop', loss=Linf_error, metrics=[Linf_error])
+        # todo define the optimization method
+        adam = optimizers.Adam(lr=1e-3)
+        model.compile(optimizer=adam, loss='mse', metrics=['mse'])
 
         return model
 
@@ -85,5 +106,51 @@ class MimicModel(object):
         return 0
 
     def load(self, model_url):
-        self.model = load_model(model_url, custom_objects={'Linf_error':Linf_error})
+        self.model = load_model(model_url)
         return 0
+
+if __name__ == "__main__":
+    '''
+    filename = '../agent-zoo/data/train_data'
+    out_filename = './saved/opp_var'
+
+    opp_obs, opp_act, adv_act, opp_next_obs = load_data(filename)
+    
+    data_X_true = np.concatenate((opp_obs, opp_act, adv_act), axis=1)
+    data_Y_true = opp_next_obs
+    
+    x_mean, x_var, data_X_true = norm(data_X_true)
+    y_mean, y_var, data_Y_true = norm(data_Y_true)
+    with open(out_filename, 'wb') as writer:
+      pkl.dump([x_mean, x_var, y_mean, y_var], writer, pkl.HIGHEST_PROTOCOL)
+    writer.close()
+    '''
+    out_filename = '/home/xkw5132/Adv_RL/src/modelfree/policies/saved/policy_data.pkl'
+    with open(out_filename, 'rb') as f:
+        [opp_obs, opp_acts] = pkl.load(f)
+    data_X_true = np.vstack(opp_obs)
+    data_Y_true = np.vstack(opp_acts)
+
+    from sklearn.model_selection import KFold
+    model_candidates = []
+
+    kfold = KFold(n_splits=10, shuffle=True, random_state=1992)
+    cvscores = []
+
+    cnt = 0
+    for train, test in kfold.split(data_X_true, data_Y_true):
+        model = RL_model(input_shape=(380,), out_shape=(17,))
+        model.fit(data_X_true[train], data_Y_true[train], epoch=100, batch_size=256)
+        scores = model.evaluate(data_X_true[test], data_Y_true[test], verbose=0)
+        print("%s: %.2f%%" % (model.model.metrics_names[1], scores[1] * 100))
+        cvscores.append(1.0 * scores[1])
+        model_candidates.append(model)
+        out_file = './saved/mimic_model_' + str(cnt) + '.h5'
+        model.save(out_file)
+        cnt += 1
+    print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
+    best_index = np.argmin(cvscores)
+    model = model_candidates[best_index]
+
+    print('best index is ', best_index)
+    model.save("./saved/mimic_model.h5")
