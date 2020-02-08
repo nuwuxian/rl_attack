@@ -154,12 +154,15 @@ class ZooAgent(object):
         return self.agent.reset()
 
     # return the needed state
-
     def get_state(self):
         return self.agent.state
 
     def act(self, observation, reward=None, done=None):
         return self.agent.act(stochastic=False, observation=observation)[0]
+
+    # return the needed grad
+    def grad(self, observation):
+        return self.agent.get_gradient(stochastic=False, observation=observation)
 
 
 def make_zoo_agent(env_name, ob_space, action_space, tag=2, scope=""):
