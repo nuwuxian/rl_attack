@@ -1,5 +1,5 @@
 # rl_attack
-We implement the code both for RNN and MLP victim policy with interpretation
+We implement the code both for RNN and MLP victim policy with attention mechanism.
 
 ## Dependencies
 
