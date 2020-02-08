@@ -1,6 +1,5 @@
 # rl_attack
-Currently, we only implement the white-box attack without attention based on mlp-policy. We will support attention and lstm-policy in 
-the following days. 
+We implement the code both for RNN and MLP victim policy with interpretation
 
 ## Dependencies
 
