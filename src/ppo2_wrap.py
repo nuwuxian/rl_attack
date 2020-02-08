@@ -22,7 +22,7 @@ from stable_baselines.a2c.utils import total_episode_reward_logger
 from game_utils import infer_next_ph
 from explain_gradient import GradientExp
 from pretrain_model import RL_func, RL_model
-
+from agent import ZooAgent
 import pdb
 
 
@@ -34,7 +34,7 @@ class MyPPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False],
+                 full_tensorboard_log=False, hyper_settings=[0, -0.2, 0, 1, 0, 1, False, True, False],
                  model_saved_loc=None, env_name=None, env_path=None):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
@@ -91,7 +91,11 @@ class MyPPO2(ActorCriticRLModel):
         self.black_box_att = hyper_settings[6]
         self.use_explanation = hyper_settings[7]
         self.masking_attention = hyper_settings[8]
+        self.agent = None
 
+        if not self.black_box_att and self.use_explanation:
+            self.agent = ZooAgent(self.env_name, self.observation_space, \
+                                  self.action_space, tag=2, scope="")
         if self.black_box_att:
             self.pretrained_mimic = True
         else:
@@ -420,9 +424,10 @@ class MyPPO2(ActorCriticRLModel):
                 obs_opp_ph = obs_oppo
                 action_oppo_ph = actions_oppo
                 # todo calculate the attention paid on opponent
-                attention = self.calculate_attention(obs_opp_ph, exp_test)
-                is_stochastic = False
+                attention = self.calculate_attention(obs_oppo=obs_opp_ph, action_oppo=action_oppo_ph, \
+                                        exp_test=exp_test, black_box_att=self.black_box_att)
 
+                is_stochastic = False
                 ep_info_buf.extend(ep_infos)
                 mb_loss_vals = []
 
@@ -581,12 +586,21 @@ class MyPPO2(ActorCriticRLModel):
         model.sess.run(restores)
 
         return model
-    # Adding attention
-    def calculate_attention(self, obs_oppo, exp_test=None):
+
+    # support black-white box
+    # pass the action_oppo
+    def calculate_attention(self, obs_oppo, action_oppo=None, exp_test=None, black_box_att=True):
         if self.use_explanation:
-            assert exp_test != None
-            grads = exp_test.grad(obs_oppo)
-            oppo_action = exp_test.output(obs_oppo)
+            if black_box_att:
+               assert exp_test != None
+            else:
+               assert self.agent != None
+            if black_box_att:
+                grads = exp_test.grad(obs_oppo)
+                oppo_action = exp_test.output(obs_oppo)
+            else:
+                grads = self.agent.grad(obs_oppo)
+                oppo_action = action_oppo
             if not self.masking_attention:
                 if "YouShallNotPassHuman" in self.env_name or \
                         "SumoHumans" in self.env_name or \
@@ -595,7 +609,10 @@ class MyPPO2(ActorCriticRLModel):
                 else:
                     grads[:, 0:-15] = 0
                 new_obs_oppo = grads * obs_oppo
-                new_oppo_action = exp_test.output(new_obs_oppo)
+                if black_box_att:
+                    new_oppo_action = exp_test.output(new_obs_oppo)
+                else:
+                    new_oppo_action = self.agent.act(observation=new_obs_oppo)
                 relative_norm = np.max(abs(new_oppo_action - oppo_action), axis=1)
                 # relative_action_norm = np.linalg.norm(new_oppo_action - oppo_action, axis=1)
                 new_scalar = 1.0 / (1 + relative_norm)
@@ -605,7 +622,6 @@ class MyPPO2(ActorCriticRLModel):
                 return grads * self.hyper_weights[5]
         else:
             return np.ones(obs_oppo.shape[0])
-
 
 
 

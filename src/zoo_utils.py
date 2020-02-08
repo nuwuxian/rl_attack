@@ -134,6 +134,7 @@ class MlpPolicyValue(Policy):
 
             self.pd = DiagonalGaussian(mean, logstd)
             self.sampled_action = switch(self.stochastic_ph, self.pd.sample(), self.pd.mode())
+            self.grad = tf.gradients(self.sampled_action, self.observation_ph)
 
     def make_feed_dict(self, observation, taken_action):
         return {
@@ -143,10 +144,29 @@ class MlpPolicyValue(Policy):
 
     def act(self, observation, stochastic=True):
         outputs = [self.sampled_action, self.vpred]
+        dim = len(observation.shape)
         a, v = tf.get_default_session().run(outputs, {
-            self.observation_ph: observation[None],
+            self.observation_ph: observation[None] if dim == 1 else observation,
             self.stochastic_ph: stochastic})
-        return a[0], {'vpred': v[0]}
+        dim = a.shape[0]
+        return a[0] if dim == 1 else a, {'vpred': v[0]}
+
+    # return gradients
+    def get_gradient(self, observation, stochastic=True, normalize=True):
+        outputs = [self.grad]
+        dim = len(observation.shape)
+
+        g = tf.get_default_session().run(outputs, {
+            self.observation_ph: observation[None] if dim == 1 else observation,
+            self.stochastic_ph: stochastic})
+        # normalize the gradient
+        sal_x = g[0][0]
+        if normalize:
+            sal_x = np.abs(g[0][0])
+            sal_x_max = np.max(sal_x, axis=1)
+            sal_x_max[sal_x_max == 0] = 1e-16
+            sal_x = sal_x / sal_x_max[:, None]
+        return sal_x
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
