@@ -1,97 +1,131 @@
-import argparse
+from zoo_utils import LSTMPolicy, MlpPolicyValue
+from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
 import gym
 import gym_compete
+import pickle
+import sys
+import argparse
 import tensorflow as tf
-from stable_baselines import PPO2
-from agent import make_zoo_agent, make_victim_agent, make_trigger_agent, make_random_agent
-from environment import make_multi2single_env, make_zoo_multi2single_env, make_trojan_env
+import numpy as np
 from common import env_list
+from gym import wrappers
 
-max_episodes = 100
-pretrain_template = "../agent-zoo/%s-pretrained-expert-1000-1000-1e-03.pkl"
-adv_template = "../agent-zoo/%s-adv-%d.pkl" 
+from stable_baselines.common.running_mean_std import RunningMeanStd
+from zoo_utils import setFromFlat, load_from_file, load_from_model
 
-# check victim & stable_baselines
-# choose between render & print only
-if __name__ == "__main__":
+def run(config):
+    ENV_NAME = env_list[config.env]
 
-    parser = argparse.ArgumentParser()
-    # env serial number
-    # 0: RunToGoalAnts-v0
-    # 1: RunToGoalHumans-v0
-    # 2: YouShallNotPassHumans-v0
-    # 3: KickAndDefend-v0
-    # 4: SumoAnts-v0
-    # 5: SumoHumans-v0
-    parser.add_argument('env', type=int)
-    # 'zoo', 'victim', 'stable_baseline'
-    parser.add_argument('agent_type')
-    parser.add_argument('--iter', type=int, default=1000000)
-    parser.add_argument('--render', type=int, default=0)
-    # tag, version for zoo
-    # file name for stable baseline
-    args = parser.parse_args()
+    if ENV_NAME in ['multicomp/YouShallNotPassHumans-v0', "multicomp/RunToGoalAnts-v0", "multicomp/RunToGoalHumans-v0"]:
+        policy_type="mlp"
+    else:
+        policy_type="lstm"
 
-    env_name = env_list[args.env]
-    print("test %s with %s agent"%(env_name, args.agent_type))
+    env = gym.make(ENV_NAME)
 
-    env = None
-    agent = None
-    if args.agent_type == 'zoo-zoo':
-        env = make_zoo_multi2single_env(env_name)
-        agent = make_zoo_agent(env_name, env.observation_space, env.action_space, tag=1, scope='zoo')
-    elif args.agent_type == 'victim-trigger':
-        env = make_trojan_env(env_name)
-        agent = make_victim_agent(env_name, env.observation_space, env.action_space)
-    elif args.agent_type == 'pretrain-zoo':
-        env = make_zoo_multi2single_env(env_name)
-        agent = PPO2.load(pretrain_template%(env_name.split('/')[1]))
-    elif args.agent_type == 'pretrain-trigger':
-        inner_env = gym.make(env_name)
-        inner_agent = make_trigger_agent(env_name)
-        env = make_multi2single_env(inner_env, inner_agent)
-        agent = PPO2.load(pretrain_template%(env_name.split('/')[1]))
-    elif args.agent_type == 'adv-zoo':
-        env = make_zoo_multi2single_env(env_name)
-        agent = PPO2.load(adv_template%(env_name.split('/')[1], args.iter))
-    elif args.agent_type == 'adv-trigger':
-        inner_env = gym.make(env_name)
-        inner_agent = make_trigger_agent(env_name)
-        env = make_multi2single_env(inner_env, inner_agent)
-        agent = PPO2.load(adv_template%(env_name.split('/')[1], args.iter))
-    elif args.agent_type == 'rand-trigger':
-        inner_env = gym.make(env_name)
-        inner_agent = make_trigger_agent(env_name, inner_env.action_space.spaces[1])
-        env = make_multi2single_env(inner_env, inner_agent)
-        agent = make_random_agent(inner_env.action_space.spaces[0])
+    epsilon = config.epsilon
+    clip_obs = config.clip_obs
 
-    print("Finish loading, start test")
-    ob = env.reset()
-    num_episodes = 0
-    total_score = 0
-    total_reward = 0
-    total_step = 0
-    total_tie = 0
-    while num_episodes < max_episodes:
-        if args.render == 1:
-            env.render()
-        action = None
-        if args.agent_type[:8] == 'pretrain' or args.agent_type[:3] == 'adv':
-            action, _ = agent.predict(observation=ob, deterministic=True)
+    param_paths = [config.opp_path, config.vic_path]
+
+    tf_config = tf.ConfigProto(
+        inter_op_parallelism_threads=1,
+        intra_op_parallelism_threads=1)
+    sess = tf.Session(config=tf_config)
+    sess.__enter__()
+
+    retrain_id = config.retrain_id
+
+    policy = []
+
+    policy.append(MlpPolicy(sess, env.observation_space.spaces[0], env.action_space.spaces[0],
+                            1, 1, 1, reuse=False))
+
+    policy.append(MlpPolicyValue(scope="policy1", reuse=False,
+                                         ob_space=env.observation_space.spaces[1],
+                                         ac_space=env.action_space.spaces[1],
+                                         hiddens=[64, 64], normalize=True))
+
+    # initialize uninitialized variables
+    sess.run(tf.variables_initializer(tf.global_variables()))
+
+    for i in range(2):
+        if i == retrain_id:
+            param = load_from_model(param_pkl_path=param_paths[i])
+            adv_agent_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='model')
+            setFromFlat(adv_agent_variables, param)
         else:
-            action = agent.act(observation=ob)
-        ob, reward, done, info = env.step(action)
-        total_step += 1
-        total_reward += reward
-        if done:
-            num_episodes += 1
-            if 'winner' in info:
-                total_score += 1
-            elif not ('loser' in info):
-                total_tie += 1
-            ob = env.reset()
-        if args.render == 1:
-            input("press any key")
+            param = load_from_file(param_pkl_path=param_paths[i])
+            setFromFlat(policy[i].get_variables(), param)
 
-    print(total_step/max_episodes)
-    print("Winning Rate: %f, Tie Rate: %f"%(total_score/float(max_episodes), total_tie/float(max_episodes)))
+
+    max_episodes = config.max_episodes
+    num_episodes = 0
+    nstep = 0
+    total_reward = [0.0  for _ in range(len(policy))]
+    total_scores = [0 for _ in range(len(policy))]
+
+    # norm path:
+    obs_rms = load_from_file(config.norm_path)
+
+
+    # total_scores = np.asarray(total_scores)
+    observation = env.reset()
+    print("-"*5 + " Episode %d " % (num_episodes+1) + "-"*5)
+    while num_episodes < max_episodes:
+        # normalize the observation-0 and observation-1
+        obs_0, obs_1 = observation
+        obs_0 = np.clip(
+            (obs_0 - obs_rms.mean) / np.sqrt(obs_rms.var + 1e-8),
+            -10, 10)
+
+        action_0 = policy[0].step(obs=obs_0[None,:], deterministic=False)[0][0]
+        action_1 = policy[1].act(stochastic=True, observation=obs_1)[0]
+        action = (action_0, action_1)
+
+        observation, reward, done, infos = env.step(action)
+        nstep += 1
+        for i in range(len(policy)):
+            total_reward[i] += reward[i]
+        if done[0]:
+            num_episodes += 1
+            draw = True
+
+
+            for i in range(len(policy)):
+                if 'winner' in infos[i]:
+                    draw = False
+                    total_scores[i] += 1
+                    print("Winner: Agent {}, Scores: {}, Total Episodes: {}".format(i, total_scores, num_episodes))
+            if draw:
+                print("Game Tied: Agent {}, Scores: {}, Total Episodes: {}".format(i, total_scores, num_episodes))
+            observation = env.reset()
+            nstep = 0
+            total_reward = [0.0  for _ in range(len(policy))]
+
+            if num_episodes < max_episodes:
+                print("-"*5 + "Episode %d" % (num_episodes+1) + "-"*5)
+    env.close()
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description="Environments for Multi-agent competition")
+    p.add_argument("--env", default=2, type=int)
+    p.add_argument("--retrain_id", default=0, type=int)
+    p.add_argument("--opp-path", default="/home/xkw5132/rl_attack/agent-zoo/20200329_222037-ppo2/checkpoints/000019955712/model.pkl", type=str)
+    p.add_argument("--vic_path", default="/home/xkw5132/rl_attack/multiagent-competition/agent-zoo/you-shall-not-pass/agent2_parameters-v1.pkl", type=str)
+    p.add_argument("--norm_path", default="/home/xkw5132/rl_attack/agent-zoo/20200329_222037-ppo2/checkpoints/000019955712/obs_rms.pkl", type=str)
+
+    p.add_argument("--max-episodes", default=200, help="max number of matches", type=int)
+    p.add_argument("--epsilon", default=1e-8, type=float)
+    p.add_argument("--clip_obs", default=10, type=float)
+
+    config = p.parse_args()
+    run(config)
+
+
+
+
+
+
+    
