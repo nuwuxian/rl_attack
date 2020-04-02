@@ -14,6 +14,17 @@ def load_from_file(param_pkl_path):
         params = pickle.load(f)
     return params
 
+def load_from_model(param_pkl_path):
+    with open(param_pkl_path, 'rb') as f:
+        params = pickle.load(f)
+    policy_param = params[1][0]
+
+    flat_param = []
+    for param in policy_param:
+        flat_param.append(param.reshape(-1))
+    flat_param = np.concatenate(flat_param, axis=0)
+    return flat_param
+
 def setFromFlat(var_list, flat_params, sess=None):
     shapes = list(map(lambda x: x.get_shape().as_list(), var_list))
     total_size = np.sum([int(np.prod(shape)) for shape in shapes])

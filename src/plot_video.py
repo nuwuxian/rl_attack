@@ -10,11 +10,12 @@ import re
 import tempfile
 import warnings
 import tensorflow as tf
-
-
-from wrappers import TrajectoryRecorder, VideoWrapper
+import argparse
+import gym
+from wrappers import VideoWrapper
 from annotated_gym_compete import AnnotatedGymCompete
 from environment import make_zoo_multi2single_env
+from compete import GymCompeteToOurs, game_outcome
 
 from common import env_list
 
@@ -26,24 +27,22 @@ from video_utils import simulate, load_policy
 
 parser = argparse.ArgumentParser()
 # game env
-parser.add_argument("--env", type=int, default=3)
-
+parser.add_argument("--env", type=int, default=5)
 # number of game environment. should be divisible by NBATCHES if using a LSTM policy
-parser.add_argument("--n_games", type=int, default=2) # N_GAME = 8
+parser.add_argument("--n_games", type=int, default=1) # N_GAME = 8
 
-
-parser.add_argument("--agent_a_path", type=str, default=None)
-parser.add_argument("--agent_a_type", type=str, default=None)
-parser.add_argument("--agent_b_path", type=str, default=None)
-parser.add_argument("--agent_b_type", type=str, default=None)
+parser.add_argument("--agent_a_type", type=str, default="zoo")
+parser.add_argument("--agent_a_path", type=str, default="/home/xkw5132/Music/rl_newloss/MuJoCo/multiagent-competition/agent-zoo/sumo/humans/agent_parameters-v3.pkl")
+parser.add_argument("--agent_b_type", type=str, default="zoo")
+parser.add_argument("--agent_b_path", type=str, default="/home/xkw5132/Music/rl_newloss/MuJoCo/multiagent-competition/agent-zoo/sumo/humans/agent_parameters-v3.pkl")
 parser.add_argument("--norm_path", type=str, default=None)
 
 parser.add_argument("--render", type=bool, default=True)
-parser.add_argument("--episodes", type=int, default=10)
+parser.add_argument("--episodes", type=int, default=3)
 parser.add_argument("--timesteps", type=int, default=None)
 
-parser.add_argument("--video", type=bool, default=False)
-parser.add_argument("--save_dir", type=str, default=None)
+parser.add_argument("--video", type=bool, default=True)
+parser.add_argument("--save_dir", type=str, default="/home/xkw5132/Desktop/video")
 
 
 args = parser.parse_args()
@@ -55,6 +54,7 @@ agent_a_path = args.agent_a_path
 agent_b_path = args.agent_b_path
 agent_a_type = args.agent_a_type
 agent_b_type = args.agent_b_type
+norm_path = args.norm_path
 
 episodes = args.episodes
 timesteps = args.timesteps
@@ -79,16 +79,7 @@ if video:
         },
    }
 
-
-def game_outcome(info):
-    draw = True
-    for i, agent_info in info.items():
-        if 'winner' in agent_info:
-            return i
-    if draw:
-        return None
-
-def get_empirical_score(venv, agents, episodes, timesteps, render):
+def get_empirical_score(venv, agents, episodes, timesteps, render, norm_path):
     """Computes number of wins for each agent and ties. At least one of `episodes`
        and `timesteps` must be specified.
 
@@ -106,33 +97,23 @@ def get_empirical_score(venv, agents, episodes, timesteps, render):
 
     # This tells sacred about the intermediate computation so it
     # updates the result as the experiment is running
-    sim_stream = simulate(venv, agents, render=render, record=False)
+    sim_stream = simulate(venv, agents, render=render, record=False, norm_path=norm_path)
 
-    num_timesteps = collections.defaultdict(int)
-    completed_timesteps = 0
     completed_episodes = 0
-    for _, _, dones, infos in sim_stream:
-        for i, (done, info) in enumerate(zip(dones, infos)):
-            num_timesteps[i] += 1
+    for _, _, done, info in sim_stream:
 
-            if done:
-                completed_timesteps += num_timesteps[i]
-                num_timesteps[i] = 0
-                completed_episodes += 1
-
-                winner = game_outcome(info)
-                if winner is None:
-                    result['ties'] += 1
-                else:
-                    result[f'win{winner}'] += 1
+        if done:
+            completed_episodes += 1
+            winner = game_outcome(info)
+            if winner is None:
+               result['ties'] += 1
+            else:
+               result[f'win{winner}'] += 1
 
         if episodes is not None and completed_episodes >= episodes:
             break
-        if timesteps is not None and completed_timesteps >= timesteps:
-            break
 
     return result
-
 
 def _save_video_or_metadata(env_dir, saved_video_path):
     """
@@ -147,8 +128,6 @@ def _save_video_or_metadata(env_dir, saved_video_path):
     video_ptn = re.compile(r'video.(\d*).mp4')
     metadata_ptn = re.compile(r'video.(\d*).meta.json')
 
-
-
 def score_agent(env_name, agent_a_path, agent_b_path, agent_a_type, 
                 agent_b_type,  num_env, videos, video_params):
 
@@ -156,46 +135,38 @@ def score_agent(env_name, agent_a_path, agent_b_path, agent_a_type,
     save_dir = video_params['save_dir']
     if videos:
         if save_dir is None:
-            score_ex_logger.info("No directory provided for saving videos; using a tmpdir instead,"
-                                 "but videos will be saved to Sacred run directory")
             tmp_dir = tempfile.TemporaryDirectory()
             save_dir = tmp_dir.name
         else:
             tmp_dir = None
         video_dirs = [osp.join(save_dir, str(i)) for i in range(num_env)]
 
-
     def env_fn(i):
 
         env = gym.make(env_name)
+        env = GymCompeteToOurs(env)
         if videos:
             if video_params['annotated']:
                 if 'multicomp' in env_name:
                     assert num_env == 1, "pretty videos requires num_env=1"
                     env = AnnotatedGymCompete(env, env_name, agent_a_type, agent_a_path,
-                                              agent_b_type, agent_b_path, mask_agent_index,
+                                              agent_b_type, agent_b_path, None,
                                               **video_params['annotation_params'])
                 else:
                     warnings.warn(f"Annotated videos not supported for environment '{env_name}'")
             env = VideoWrapper(env, video_dirs[i], video_params['single_file'])
         return env
-    env_fns = [functools.partial(env_fn, i) for i in range(num_env)]
 
-    if venv.num_agents == 1 and agent_b_path != 'none':
-        raise ValueError("Set agent_b_path to 'none' if environment only uses one agent.")
+    env = env_fn(0)
 
     agent_paths = [agent_a_path, agent_b_path]
     agent_types = [agent_a_type, agent_b_type]
 
     # load agents
-    agents = load_policy(agent_types, agent_paths, env_fns, env_name)
-    score = get_empirical_score(venv, agents, episodes, timesteps, render, norm_path)
+    agents = load_policy(agent_types, agent_paths, env, env_name)
+    score = get_empirical_score(env, agents, episodes, timesteps, render, norm_path)
 
-    for agent in agents:
-        if not isinstance(agent, MlpPolicy) and agent.sess is not None:
-            agent.sess.close()
-
-    venv.close()
+    env.close()
 
     if videos:
         for env_video_dir in video_dirs:
@@ -211,10 +182,9 @@ def score_agent(env_name, agent_a_path, agent_b_path, agent_a_type,
             tmp_dir.cleanup()
     return score
 
-
 def main():
     score_agent(env_name, agent_a_path, agent_b_path, agent_a_type,
-                agent_b_type, num_env, videos, video_params)
+                agent_b_type, num_env, video, video_params)
 
 if __name__ == '__main__':
     main()

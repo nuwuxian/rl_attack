@@ -91,7 +91,6 @@ def run(config):
             num_episodes += 1
             draw = True
 
-
             for i in range(len(policy)):
                 if 'winner' in infos[i]:
                     draw = False

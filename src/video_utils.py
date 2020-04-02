@@ -14,7 +14,7 @@ def simulate(venv, policies, render=False, record=True, norm_path=None):
     :return: streams information about the simulation
     """
     observations = venv.reset()
-    dones = [False] * venv.num_envs
+    dones = [False]
     states = [None for _ in policies]
 
     if norm_path != None:
@@ -30,15 +30,13 @@ def simulate(venv, policies, render=False, record=True, norm_path=None):
         for policy_ind, (policy, obs, state) in enumerate(zip(policies, observations, states)):
 
             if isinstance(policy, LSTMPolicy) or isinstance(policy, MlpPolicyValue):
-                obs = obs[0]
                 act = policy.act(stochastic=True, observation=obs)[0]
-                act = act[None, :]
                 new_state = None
             else:
                 # normalize the observation
-                obs = np.clip((obs - obs_rms.mean[None,:]) / np.sqrt(obs_rms.var[None,:] + 1e-8), -10, 10)
+                obs = np.clip((obs - obs_rms.mean) / np.sqrt(obs_rms.var + 1e-8), -10, 10)
                 act, _, new_state, _ = policy.step(obs=obs, deterministic=False)
-                #act = act[0]
+                act = act[0]
             actions.append(act)
             new_states.append(new_state)
         actions = tuple(actions)
@@ -46,12 +44,14 @@ def simulate(venv, policies, render=False, record=True, norm_path=None):
         observations, rewards, dones, infos = venv.step(actions)
         # reset the agent lstm state
         # if trained by lstm-policy
-
-        if dones[0]:
+        if dones:
+            observations = venv.reset()
             for policy in policies:
                 if isinstance(policy, LSTMPolicy):
                     policy.reset()
 
+
+        dones = np.array([dones])
         yield observations, rewards, dones, infos
 
 
