@@ -65,6 +65,7 @@ if __name__=="__main__":
         parser.add_argument("--load", type=int, default=0)
         parser.add_argument("--render", type=int, default=0)
         parser.add_argument("--reverse", type=int, default=0)
+        parser.add_argument("--ratio", type=int, default=0)
         parser.add_argument('--root_dir', type=str, default="../agent-zoo")
         parser.add_argument('--exp_name', type=str, default="ppo2")
         args = parser.parse_args()
@@ -88,7 +89,7 @@ if __name__=="__main__":
                        nminibatches=nminibatches, noptepochs=noptepochs,
                        learning_rate=learning_rate,  verbose=1,
                        n_steps=n_steps, gamma=gamma, tensorboard_log=out_dir,
-                       model_saved_loc=out_dir, env_name=env_name, env_path=env_path) # , rl_path=rl_path, var_path=var_path)
+                       model_saved_loc=out_dir, env_name=env_name, env_path=env_path, mix_ratio=args.ratio) # , rl_path=rl_path, var_path=var_path)
 
         '''
         if args.load == 0:
