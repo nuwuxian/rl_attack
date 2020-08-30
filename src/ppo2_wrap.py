@@ -34,7 +34,7 @@ class MyPPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, hyper_settings=[0, -0.2, 0, 1, 0, 1, False, True, False],
+                 full_tensorboard_log=False, hyper_settings=[0, -0.2, 0, 1, 0, 1, False, True, False], mix_ratio=1.0,
                  model_saved_loc=None, env_name=None, env_path=None):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
@@ -92,6 +92,7 @@ class MyPPO2(ActorCriticRLModel):
         self.use_explanation = hyper_settings[7]
         self.masking_attention = hyper_settings[8]
         self.agent = None
+        self.mix_ratio = mix_ratio
 
         if not self.black_box_att and self.use_explanation:
             self.agent = ZooAgent(self.env_name, self.observation_space, \
@@ -168,6 +169,7 @@ class MyPPO2(ActorCriticRLModel):
                     self.obs_opp_next_ph = tf.placeholder(dtype=tf.float32, shape=train_model.obs_ph.shape,
                                                           name="obs_opp_next_ph")
                     self.stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
+                    self.ratio_ph = tf.placeholder(tf.float32, [], name="change_action_state_ratio_ph")
 
                     action_ph_noise = train_model.deterministic_action
 
@@ -204,7 +206,9 @@ class MyPPO2(ActorCriticRLModel):
                         self.change_opp_action_mse = tf.reduce_mean(
                             tf.abs(action_opp_mal_noise - self.action_opp_next_ph)
                         )
-
+                    # add change_state_mse
+                    self.change_state_mse = self.ratio_ph * tf.reduce_mean(tf.abs(obs_oppo_noise_predict - self.obs_opp_next_ph))
+                    self.change_mse = self.change_opp_action_mse - self.change_state_mse
                     # Prediction error on oppo's next observation
                     # change into the L infinity norm
                     # L(infinity) = max(0, ||l1 -l2|| - c)^2
@@ -229,7 +233,7 @@ class MyPPO2(ActorCriticRLModel):
                     self.clipfrac = tf.reduce_mean(tf.cast(tf.greater(tf.abs(ratio - 1.0),
                                                                       self.clip_range_ph), tf.float32))
                     loss = self.pg_loss - self.entropy * self.ent_coef + self.vf_loss * self.vf_coef + \
-                           self.hyper_weights[1] * self.change_opp_action_mse
+                           self.hyper_weights[1] * self.change_mse
 
                     if self.black_box_att:
                         if not self.pretrained_mimic:
@@ -314,7 +318,7 @@ class MyPPO2(ActorCriticRLModel):
                 self.summary = tf.summary.merge_all()
 
     def _train_step(self, learning_rate, cliprange, obs, returns, masks, actions, values, neglogpacs,
-                    a_opp_next, o_opp_next, attention, is_stochastic,
+                    a_opp_next, o_opp_next, attention, is_stochastic, ratio,
                     update, writer, states=None):
         """
         Training of PPO2 Algorithm
@@ -341,7 +345,7 @@ class MyPPO2(ActorCriticRLModel):
                   self.old_neglog_pac_ph: neglogpacs, self.old_vpred_ph: values,
 
                   self.action_opp_next_ph: a_opp_next, self.obs_opp_next_ph: o_opp_next,
-                  self.stochastic_ph: is_stochastic, self.attention: attention
+                  self.stochastic_ph: is_stochastic, self.ratio_ph: ratio, self.attention: attention
                   }
         if states is not None:
             td_map[self.train_model.states_ph] = states
@@ -444,7 +448,7 @@ class MyPPO2(ActorCriticRLModel):
                             slices = (arr[mbinds] for arr in (obs, returns, masks, actions, values, neglogpacs))
                             slices_hua = (arr[mbinds] for arr in (a_opp_next, o_opp_next, attention))
                             mb_loss_vals.append(self._train_step(lr_now, cliprangenow, *slices, *slices_hua,
-                                                                 is_stochastic=is_stochastic, writer=writer, update=timestep))
+                                                                 is_stochastic=is_stochastic, ratio=self.mix_ratio, writer=writer, update=timestep))
                     self.num_timesteps += (self.n_batch * self.noptepochs) // batch_size * update_fac
                 else:  # recurrent version
                     update_fac = self.n_batch // self.nminibatches // self.noptepochs // self.n_steps + 1
