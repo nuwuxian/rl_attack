@@ -29,8 +29,8 @@ def test():
     env = DummyVecEnv([lambda: env])
     print("player 2 running in Env {0}".format(sys.argv[1]))
 
-    from RoboschoolPong_v0_2017may2 import SmallReactivePolicy as Pol2
-    pi = Pol2(env.observation_space, env.action_space)
+    from RoboschoolPong_v0_2017may1 import SmallReactivePolicy as Pol1
+    pi = Pol1(env.observation_space, env.action_space)
     play(env, pi)
 
 if sys.argv[2] == "test":

@@ -10,7 +10,9 @@ import gym
 import roboschool
 from stable_baselines.common.policies import MlpPolicy,MlpLstmPolicy
 from stable_baselines import PPO1, PPO2
-from ppo2_wrap import MyPPO2
+
+from pposgd_hua import PPO1_hua_model_value
+
 from value import MlpLstmValue, MlpValue
 
 from stable_baselines.common.vec_env import DummyVecEnv,SubprocVecEnv, VecVideoRecorder
@@ -37,7 +39,7 @@ now = datetime.now()
 date_time = now.strftime("%m%d%Y-%H%M%S")
 
 
-TRAINING_ITER = 8000000
+TRAINING_ITER = 4000000
 USE_VIC = False
 
 def make_dirs(dir_dict):
@@ -59,22 +61,8 @@ def parse_args():
     parser.add_argument("--model_name", type=str, default="ppo1")
     parser.add_argument("--hyper_index", type=int, default=0)
     parser.add_argument("--player_index", type=int, default=0)
-
-    parser.add_argument("--vic_coef_init", type=int, default=1)  # positive
-    # victim loss schedule
-    parser.add_argument("--vic_coef_sch", type=str, default='const')
-    # adv loss coefficient.
-    parser.add_argument("--adv_coef_init", type=int, default=-1)  # negative
-    # adv loss schedule
-    parser.add_argument("--adv_coef_sch", type=str, default='const')
-    # diff loss coefficient.
-    parser.add_argument("--diff_coef_init", type=int, default=-3)  # negative
-    # diff loss schedule
-    parser.add_argument("--diff_coef_sch", type=str, default='const')
-
-    parser.add_argument("--n_steps", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=0)
-
+    
     return parser.parse_args()
 
 def callback(_locals, _globals):
@@ -114,17 +102,20 @@ def callback(_locals, _globals):
 
 def advlearn(env, model_name=None, dir_dict=None):
 
-    assert model_name == 'ppo2'
+    # assert model_name == 'ppo1'
 
     _, _ = setup_logger(SAVE_DIR, EXP_NAME)
 
-    model = MyPPO2(MlpPolicy, env, coef_opp_init=dir_dict['_coef_vic_init'],
-                       coef_opp_schedule=dir_dict['_coef_vic_sch'],
-                       coef_adv_init=dir_dict['_coef_adv_init'],
-                       coef_adv_schedule=dir_dict['_coef_adv_sch'],
-                       coef_abs_init=dir_dict['_coef_abs_init'],
-                       coef_abs_schedule=dir_dict['_coef_abs_sch'],
-                       n_steps=dir_dict['_n_steps'], ent_coef=0, verbose=1, opp_value=MlpValue)
+    if model_name == 'ppo1_hua_oppomodel':
+        model = PPO1_hua_model_value(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
+                         tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
+                         benigned_model_file=None, full_tensorboard_log=False,
+                         black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
+                         model_saved_loc=dir_dict['model'], clipped_attention=dir_dict['_clipped_attention'])
+    else:
+        model = PPO1(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
+                     tensorboard_log=dir_dict['tb'])
+
     try:
         model.learn(TRAINING_ITER, callback=callback, seed=dir_dict['_seed'], use_victim_ob=USE_VIC)
     except ValueError as e:
@@ -140,7 +131,7 @@ def advtrain(server_id, model_name="ppo1", dir_dict=None):
     env.unwrapped.multiplayer(env, game_server_guid=server_id, player_n=dir_dict["_player_index"])
     # Only support PPO2 and num cpu is 1
 
-    if "ppo2" in model_name:
+    if "ppo1" in model_name:
         n_cpu = 1
         env = SubprocVecEnv([lambda: env for i in range(n_cpu)])
     else:
@@ -155,6 +146,8 @@ model_name = args.model_name.lower()
 hyper_weights_index = args.hyper_index
 player_index = args.player_index
 
+hyper_weights = [0.0, -0.1, 0.0, 1, 0, 10, True, True, False]
+
 
 dir_dict= {
     "tb": "Log/{}-{}/tb/".format(memo,date_time),
@@ -163,12 +156,11 @@ dir_dict= {
     "_hyper_weights_index": hyper_weights_index,
     "_video": False,
     "_player_index": player_index,
-    "_coef_vic_init": args.vic_coef_init,
-    "_coef_vic_sch": args.vic_coef_sch,
-    "_coef_adv_init": args.adv_coef_init,
-    "_coef_adv_sch": args.adv_coef_sch,
-    "_coef_abs_init": args.diff_coef_init,
-    "_coef_abs_sch": args.diff_coef_sch,
+
+    ## whether black box or attention
+    "_black_box": hyper_weights[-3]
+    "_attention": hyper_weights[-2]
+    "_clipped_attention": hyper_weights[-1]
     "_seed": args.seed,
     "_n_steps": args.n_steps,
 }
