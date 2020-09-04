@@ -37,13 +37,6 @@ seed = args.seed
 n_steps = args.n_steps
 
 
-vic_coef_init = args.vic_coef_init
-vic_coef_sch = args.vic_coef_sch
-adv_coef_init = args.adv_coef_init
-adv_coef_sch = args.adv_coef_sch
-diff_coef_init = args.diff_coef_init
-diff_coef_sch = args.diff_coef_sch
-
 # create the gameserver, the same as enviroment
 game_server_id = args.server+"{0}".format(hyper_index)
 game = roboschool.gym_pong.PongSceneMultiplayer()

@@ -158,9 +158,9 @@ dir_dict= {
     "_player_index": player_index,
 
     ## whether black box or attention
-    "_black_box": hyper_weights[-3]
-    "_attention": hyper_weights[-2]
-    "_clipped_attention": hyper_weights[-1]
+    "_black_box": hyper_weights[-3],
+    "_attention": hyper_weights[-2],
+    "_clipped_attention": hyper_weights[-1],
     "_seed": args.seed,
     "_n_steps": args.n_steps,
 }
