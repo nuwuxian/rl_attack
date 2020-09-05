@@ -13,8 +13,6 @@ from stable_baselines import PPO1, PPO2
 from policies import MlpPolicy_hua
 from pposgd_hua import PPO1_hua_model_value
 
-from value import MlpLstmValue, MlpValue
-
 from stable_baselines.common.vec_env import DummyVecEnv,SubprocVecEnv, VecVideoRecorder
 from stable_baselines.results_plotter import load_results, ts2xy
 from stable_baselines.bench import Monitor
