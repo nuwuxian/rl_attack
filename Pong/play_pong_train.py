@@ -19,7 +19,6 @@ def parse_args():
     # model_name (previous distinguish ppo2 and ppo1, now is ppo)
     parser.add_argument("--model_name", type=str, default="ppo1")
     parser.add_argument("--hyper_index", type=int, default=3)
-    parser.add_argument("--n_steps", type=int, default=1000)
 
     # seed value
     parser.add_argument("--seed", type=int, default=0)
@@ -34,7 +33,6 @@ model_name = args.model_name
 hyper_index = args.hyper_index
 
 seed = args.seed
-n_steps = args.n_steps
 
 
 # create the gameserver, the same as enviroment
@@ -43,10 +41,10 @@ game = roboschool.gym_pong.PongSceneMultiplayer()
 gameserver = multiplayer.SharedMemoryServer(game, game_server_id, want_test_window=False, profix=str(hyper_index))
 
 # setting up the player 0
-player_0_args = "--memo={0} --server={1}" \
-                " --mod={2} --model_name={3} --hyper_index={4}" \
-                " --n_steps={5} --seed={6}".format(memo, game_server_id, mode,
-                model_name, hyper_index, n_steps, seed)
+player_0_args = "--memo={0} --server={1} " \
+                "--mod={2} --model_name={3} --hyper_index={4} " \
+                "--seed={5}".format(memo, game_server_id, mode,
+                model_name, hyper_index, seed)
 
 player_0_args = player_0_args.split(" ")
 

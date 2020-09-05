@@ -23,7 +23,7 @@ from explain_hua_gradient import GradientExp
 import pickle as pkl
 import cloudpickle
 import os
-from pretrain.mimic_action import MimicModel
+from mimic_action import MimicModel
 import pdb
 
 

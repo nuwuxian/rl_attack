@@ -10,7 +10,7 @@ import gym
 import roboschool
 from stable_baselines.common.policies import MlpPolicy,MlpLstmPolicy
 from stable_baselines import PPO1, PPO2
-
+from policies import MlpPolicy_hua
 from pposgd_hua import PPO1_hua_model_value
 
 from value import MlpLstmValue, MlpValue
@@ -37,7 +37,7 @@ import json
 
 now = datetime.now()
 date_time = now.strftime("%m%d%Y-%H%M%S")
-
+best_mean_reward = -np.inf
 
 TRAINING_ITER = 4000000
 USE_VIC = False
@@ -66,39 +66,36 @@ def parse_args():
     return parser.parse_args()
 
 def callback(_locals, _globals):
-    copyfile("/tmp/monitor/{0}/{1}/monitor.csv".format(dir_dict['_hyper_weights_index'],dir_dict['_player_index']),
+    def shift(arr, num, fill_value=np.nan):
+        result = np.empty_like(arr)
+        if num>0:
+            result[:num] = fill_value
+            result[num:] = arr[:-num]
+        elif num<0:
+            result[num:] = fill_value
+            result[:num] = arr[-num:]
+        else:
+            result = arr
+        return result
+
+    global best_mean_reward
+    # Evaluate policy training performance
+    copyfile("/tmp/monitor/{0}/{1}/monitor.csv".format(dir_dict['_hyper_weights_index'],0),
              "{0}monitor.csv".format(dir_dict['log'])
-    )
+             )
+    x, y = ts2xy(load_results(dir_dict['log']), 'timesteps')
+    if len(x) > 0:
+        mean_reward = np.mean((y[-100:]-shift(y[-100:],1,fill_value=0.0)))
+        print(x[-1], 'timesteps')
+        print("Best mean reward: {:.2f} - Last mean reward per episode: {:.2f}".format(best_mean_reward, mean_reward))
 
-    path = "{0}monitor.csv".format(dir_dict['log'])
-    data = pd.read_csv("{}".format(path), skiprows=[0], header=0)
-    # data = data.get_chunk()
-    data['score_board'] = data['score_board'].replace({'\'': '"'}, regex=True)
-
-    data_score = pd.io.json.json_normalize(data['score_board'].apply(json.loads))
-
-    data_score['total_round'] = data_score[['left.oppo_double_hit', 'left.oppo_miss_catch',
-                                            'left.oppo_slow_ball',
-                                            'right.oppo_double_hit', 'right.oppo_miss_catch',
-                                            'right.oppo_slow_ball']].abs().sum(axis=1)
-
-    data_score_next = data_score.shift(periods=1)
-
-    data_score_epoch = data_score - data_score_next
-
-    data_score_epoch['left_winning'] = data_score_epoch[
-        ['left.oppo_double_hit', 'left.oppo_miss_catch',  # 'left.oppo_miss_start',
-         'left.oppo_slow_ball']].abs().sum(axis=1)
-    data_score_epoch['tie_winning'] = data_score_epoch['left.not_finish'].abs()
-
-    data_score_epoch['left_winning'] = data_score_epoch['left_winning'] + data_score_epoch['tie_winning']
-    data_score_epoch['total_round'] += data_score_epoch['left.not_finish'].abs()
-    wining_rate_sum = data_score_epoch['left_winning'].rolling(1000, min_periods=50).sum()
-    total_round_sum = data_score_epoch['total_round'].rolling(1000, min_periods=50).sum()
-
-    wining_rate = wining_rate_sum / total_round_sum
-    result = pd.concat([wining_rate], names=['winning_rate'], axis=1)
-    logger.logkv('wining_rate', result.values[-1,0])
+        # New best model, you could save the agent here
+        if mean_reward > best_mean_reward:
+            best_mean_reward = mean_reward
+            # Example for saving best model
+            print("Saving new best model")
+            _locals['self'].save(dir_dict['model'] + 'best_model.pkl')
+    return True
 
 def advlearn(env, model_name=None, dir_dict=None):
 
@@ -107,7 +104,7 @@ def advlearn(env, model_name=None, dir_dict=None):
     _, _ = setup_logger(SAVE_DIR, EXP_NAME)
 
     if model_name == 'ppo1_hua_oppomodel':
-        model = PPO1_hua_model_value(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
+        model = PPO1_hua_model_value(MlpPolicy_hua, env, timesteps_per_actorbatch=1000, verbose=1,
                          tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
                          benigned_model_file=None, full_tensorboard_log=False,
                          black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
@@ -117,7 +114,7 @@ def advlearn(env, model_name=None, dir_dict=None):
                      tensorboard_log=dir_dict['tb'])
 
     try:
-        model.learn(TRAINING_ITER, callback=callback, seed=dir_dict['_seed'], use_victim_ob=USE_VIC)
+        model.learn(TRAINING_ITER, callback=callback, seed=SEED)
     except ValueError as e:
         traceback.print_exc()
         print("Learn exit!")
@@ -162,12 +159,9 @@ dir_dict= {
     "_attention": hyper_weights[-2],
     "_clipped_attention": hyper_weights[-1],
     "_seed": args.seed,
-    "_n_steps": args.n_steps,
 }
 
-SAVE_DIR = './agent_zoo/'+ "Pong_" + str(args.vic_coef_init) + '_' + args.vic_coef_sch + \
-    '_' + str(args.adv_coef_init) + '_' + args.adv_coef_sch +  \
-    '_' + str(args.diff_coef_init) + '_' + args.diff_coef_sch
+SAVE_DIR = './agent_zoo/'+ "Pong"
 
 EXP_NAME = str(args.seed)
 
