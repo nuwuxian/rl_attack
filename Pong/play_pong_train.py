@@ -17,9 +17,8 @@ def parse_args():
     parser.add_argument("--mod", type=str, default="advtrain")
 
     # model_name (previous distinguish ppo2 and ppo1, now is ppo)
-    parser.add_argument("--model_name", type=str, default="ppo1")
+    parser.add_argument("--model_name", type=str, default="ppo1_hua_oppomodel")
     parser.add_argument("--hyper_index", type=int, default=3)
-
     # seed value
     parser.add_argument("--seed", type=int, default=0)
 

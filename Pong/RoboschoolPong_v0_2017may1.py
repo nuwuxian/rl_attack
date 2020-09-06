@@ -18,6 +18,13 @@ class SmallReactivePolicy:
         x = relu(np.dot(x, weights_dense2_w) + weights_dense2_b)
         x = np.dot(x, weights_final_w) + weights_final_b
         return x
+    @staticmethod
+    def output_act_for_adv(ob):
+        x = ob
+        x = relu(np.dot(x, weights_dense1_w) + weights_dense1_b)
+        x = relu(np.dot(x, weights_dense2_w) + weights_dense2_b)
+        x = np.dot(x, weights_final_w) + weights_final_b
+        return x
 
     def predict_act(self, ob, black_model=False, obs_prev=None, act_prev=None):
         if self.model is not None and not black_model:

@@ -148,6 +148,7 @@ dir_dict= {
     "tb": "Log/{}-{}/tb/".format(memo,date_time),
     "model": "Log/{}-{}/model/".format(memo, date_time),
     "log": "Log/{}-{}/".format(memo,date_time),
+    "_hyper_weights": hyper_weights,
     "_hyper_weights_index": hyper_weights_index,
     "_video": False,
     "_player_index": player_index,
