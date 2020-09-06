@@ -6,7 +6,7 @@ from gym import Wrapper, RewardWrapper
 
 from stable_baselines.common.vec_env import VecEnvWrapper
 from common import trigger_map
-from agent import make_zoo_agent, make_trigger_agent
+from agent import make_zoo_agent, make_adv_agent
 from collections import Counter
 
 def func(x):
@@ -51,7 +51,7 @@ class Monitor(VecEnvWrapper):
 
 class Multi2SingleEnv(Wrapper):
 
-    def __init__(self, env, agent, agent_idx):
+    def __init__(self, env, agent, agent_idx, retrain_victim=False):
         Wrapper.__init__(self, env)
         self.agent = agent
         self.reward = 0
@@ -64,6 +64,7 @@ class Multi2SingleEnv(Wrapper):
         # num_agents is 2
         self.num_agents = 2
         self.outcomes = []
+        self.retrain_victim = retrain_victim
 
     def step(self, action):
         self.cnt += 1
@@ -122,10 +123,6 @@ def make_zoo_multi2single_env(env_name, reverse=True):
 
     return Multi2SingleEnv(env, zoo_agent, reverse)
 
-def make_multi2single_env(env, agent):
-
-    return Multi2SingleEnv(env, agent)
-
 
 # make adv_agent
 def make_adv_multi2single_env(env_name, adv_agent_path, adv_agent_norm_path, reverse):
@@ -135,4 +132,4 @@ def make_adv_multi2single_env(env_name, adv_agent_path, adv_agent_norm_path, rev
     adv_agent = make_adv_agent(env.observation_space.spaces[1], env.action_space.spaces[1], 1, adv_agent_path,
                                adv_ismlp=True, adv_obs_normpath=adv_agent_norm_path)
 
-    return Multi2SingleEnv(env, adv_agent, reverse)
+    return Multi2SingleEnv(env, adv_agent, reverse, retrain_victim=True)

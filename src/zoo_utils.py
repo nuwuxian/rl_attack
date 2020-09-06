@@ -268,6 +268,8 @@ class MlpPolicyValue(Policy):
             self.policy_proba = [self.proba_distribution.mean, self.proba_distribution.std]
             # self.grad
             self.grad = tf.gradients(self.sampled_action, self.observation_ph)
+            # add deterministic action
+            self.deterministic_action = self.pd.mode()
 
 
     def make_feed_dict(self, observation, taken_action):

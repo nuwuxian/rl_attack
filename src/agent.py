@@ -6,7 +6,8 @@ from gym import Wrapper
 import gym_compete
 from common import trigger_map, action_map, get_zoo_path
 import tensorflow as tf
-from zoo_utils import MlpPolicyValue, LSTMPolicy, load_from_file, setFromFlat
+from zoo_utils import MlpPolicyValue, LSTMPolicy, load_from_file, load_from_model, setFromFlat
+from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
 
 # Random agent
 class RandomAgent(object):
@@ -223,29 +224,3 @@ class AdvAgent(object):
 
 def make_adv_agent(ob_space, action_space, n_envs, adv_model_path, adv_ismlp, adv_obs_normpath=None):
     return AdvAgent(ob_space, action_space, n_envs, adv_model_path, adv_ismlp, adv_obs_normpath)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
