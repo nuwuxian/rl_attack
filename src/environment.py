@@ -67,7 +67,12 @@ class Multi2SingleEnv(Wrapper):
 
     def step(self, action):
         self.cnt += 1
-        self_action = self.agent.act(observation=self.ob, reward=self.reward, done=self.done)
+
+        if self.retrain_victim:
+            self_action = self.agent.act(observation=self.ob[None,:], reward=self.reward, done=self.done).flatten()
+
+        else:
+            self_action = self.agent.act(observation=self.ob, reward=self.reward, done=self.done)
         # lstm_policy
         self.oppo_ob = self.ob.copy()
         #self.oppo_state = self.agent.get_state().copy()
@@ -120,3 +125,14 @@ def make_zoo_multi2single_env(env_name, reverse=True):
 def make_multi2single_env(env, agent):
 
     return Multi2SingleEnv(env, agent)
+
+
+# make adv_agent
+def make_adv_multi2single_env(env_name, adv_agent_path, adv_agent_norm_path, reverse):
+    env = gym.make(env_name)
+
+    # specify the adv opponent of the victim agent.
+    adv_agent = make_adv_agent(env.observation_space.spaces[1], env.action_space.spaces[1], 1, adv_agent_path,
+                               adv_ismlp=True, adv_obs_normpath=adv_agent_norm_path)
+
+    return Multi2SingleEnv(env, adv_agent, reverse)
