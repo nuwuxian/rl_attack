@@ -90,29 +90,7 @@ if __name__=="__main__":
                        learning_rate=learning_rate,  verbose=1,
                        n_steps=n_steps, gamma=gamma, tensorboard_log=out_dir,
                        model_saved_loc=out_dir, env_name=env_name, env_path=env_path, mix_ratio=args.ratio) # , rl_path=rl_path, var_path=var_path)
-
-        '''
-        if args.load == 0:
-            model = PPO2(MlpPolicy, 
-                         venv, 
-                         ent_coef=ent_coef,
-                         nminibatches=nminibatches,
-                         noptepochs=noptepochs,
-                         learning_rate=learning_rate,
-                         verbose=1,
-                         n_steps=n_steps,
-                         gamma=gamma)
-                         # seed=args.seed,
-                         # n_cpu_tf_sess=1)
-        else:
-            model = PPO2.load(pretrain_template%(env_name.split("/")[1]), 
-                              venv, 
-                              gamma=gamma,
-                              ent_coef=ent_coef, 
-                              nminibatches=nminibatches, 
-                              learning_rate=learning_rate,
-                              n_steps=n_steps)
-        '''
+        
         Adv_train(venv, training_iter, callback_key, callback_mul, logger)
         model.save(os.path.join(args.root_dir, env_name.split('/')[1]))
 

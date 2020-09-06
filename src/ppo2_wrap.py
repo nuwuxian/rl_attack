@@ -16,7 +16,7 @@ from stable_baselines.common import explained_variance, ActorCriticRLModel, tf_u
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy
 from stable_baselines.common.runners import AbstractEnvRunner
 
-from zoo_utils import load_from_file, setFromFlat
+from zoo_utils import load_from_file, setFromFlat, MlpPolicyValue
 from policy import mlp_policy, modeling_state
 from stable_baselines.a2c.utils import total_episode_reward_logger
 from game_utils import infer_next_ph
@@ -35,7 +35,7 @@ class MyPPO2(ActorCriticRLModel):
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
                  full_tensorboard_log=False, hyper_settings=[0, -0.2, 0, 1, 0, 1, False, True, False], mix_ratio=1.0,
-                 model_saved_loc=None, env_name=None, env_path=None):
+                 model_saved_loc=None, env_name=None, env_path=None, retrain_victim=False, norm_victim=False):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                       _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -94,6 +94,9 @@ class MyPPO2(ActorCriticRLModel):
         self.agent = None
         self.mix_ratio = mix_ratio
 
+        self.retrain_victim = retrain_victim
+        self.norm_victim = norm_victim
+
         if not self.black_box_att and self.use_explanation:
             self.agent = ZooAgent(self.env_name, self.observation_space, \
                                   self.action_space, tag=2, scope="")
@@ -135,17 +138,34 @@ class MyPPO2(ActorCriticRLModel):
 
                 n_batch_step = None
                 n_batch_train = None
-                if issubclass(self.policy, RecurrentActorCriticPolicy):
-                    assert self.n_envs % self.nminibatches == 0, "For recurrent policies, " \
-                                                                 "the number of environments run in parallel should be a multiple of nminibatches."
+
+                if self.retrain_victim:
+                    # assert is mlp policy
                     n_batch_step = self.n_envs
                     n_batch_train = self.n_batch // self.nminibatches
+                    if self.env_name in ['multicomp/YouShallNotPassHumans-v0']:
+                        act_model = MlpPolicyValue(scope="victim_policy", reuse=False,
+                                              ob_space=self.observation_space,
+                                              ac_space=self.action_space, sess=self.sess,
+                                              hiddens=[64, 64], normalize=self.norm_victim)
+                       with tf.variable_scope("train_model", reuse=True,
+                                              custom_getter=tf_util.outer_scope_getter("train_model")):
+                            train_model = MlpPolicyValue(scope="victim_policy", reuse=True,
+                                                        ob_space=self.observation_space,
+                                                        ac_space=self.action_space, sess=self.sess,
+                                                        hiddens=[64, 64], normalize=self.norm_victim)
+                else:
+                    if issubclass(self.policy, RecurrentActorCriticPolicy):
+                        assert self.n_envs % self.nminibatches == 0, "For recurrent policies, " \
+                                                                     "the number of environments run in parallel should be a multiple of nminibatches."
+                        n_batch_step = self.n_envs
+                        n_batch_train = self.n_batch // self.nminibatches
 
-                act_model = self.policy(self.sess, self.observation_space, self.action_space, self.n_envs, 1,
+                    act_model = self.policy(self.sess, self.observation_space, self.action_space, self.n_envs, 1,
                                         n_batch_step, reuse=False, **self.policy_kwargs)
-                with tf.variable_scope("train_model", reuse=True,
+                    with tf.variable_scope("train_model", reuse=True,
                                        custom_getter=tf_util.outer_scope_getter("train_model")):
-                    train_model = self.policy(self.sess, self.observation_space, self.action_space,
+                        train_model = self.policy(self.sess, self.observation_space, self.action_space,
                                               self.n_envs // self.nminibatches, self.n_steps, n_batch_train,
                                               reuse=True, **self.policy_kwargs)
                 if self.black_box_att:
@@ -155,7 +175,13 @@ class MyPPO2(ActorCriticRLModel):
                          self.mimic_model.load('../agent-zoo/agent/mimic_model.h5')
 
                 with tf.variable_scope("loss", reuse=False):
-                    self.action_ph = train_model.pdtype.sample_placeholder([None], name="action_ph")
+
+                    if self.retrain_victim:
+                        self.action_ph = tf.placeholder(shape=[None, self.action_space.shape[0]],
+                                                        dtype=tf.float32, name="action_ph")
+                    else:
+                        self.action_ph = train_model.pdtype.sample_placeholder([None], name="action_ph")
+
                     self.advs_ph = tf.placeholder(tf.float32, [None], name="advs_ph")
                     self.rewards_ph = tf.placeholder(tf.float32, [None], name="rewards_ph")
                     self.old_neglog_pac_ph = tf.placeholder(tf.float32, [None], name="old_neglog_pac_ph")
@@ -218,7 +244,10 @@ class MyPPO2(ActorCriticRLModel):
                     neglogpac = train_model.proba_distribution.neglogp(self.action_ph)
                     self.entropy = tf.reduce_mean(train_model.proba_distribution.entropy())
 
-                    vpred = train_model.value_flat
+                    if self.retrain_victim:
+                        vpred = tf.reshape(train_model.value_flat, [-1])
+                    else:
+                        vpred = train_model.value_flat
                     vpredclipped = self.old_vpred_ph + tf.clip_by_value(
                         train_model.value_flat - self.old_vpred_ph, - self.clip_range_ph, self.clip_range_ph)
                     vf_losses1 = tf.square(vpred - self.rewards_ph)
@@ -255,7 +284,11 @@ class MyPPO2(ActorCriticRLModel):
 
                     # add ppo loss
                     tf.summary.scalar('_PPO loss', loss - self.hyper_weights[1] * self.change_opp_action_mse)
-                    params = tf_util.get_trainable_vars("model")
+
+                    if self.retrain_victim:
+                       params = tf_util.get_trainable_vars("victim_policy")
+                    else:
+                       params = tf_util.get_trainable_vars("model")
                     if self.full_tensorboard_log:
                         for var in params:
                             tf.summary.histogram(var.name, var)
@@ -311,10 +344,20 @@ class MyPPO2(ActorCriticRLModel):
                 tf.global_variables_initializer().run(session=self.sess)  # pylint: disable=E1101
 
                 # load the pretrained_value
+
+                if self.retrain_victim:
+                    env_path = get_zoo_path(self.env_name, tag=2)
+                    param = load_from_file(param_pkl_path=env_path)
+                    ret_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="victim_policy/retfilter")
+                    obs_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="victim_policy/obsfilter")
+                    variables = ret_variable + obs_variable + tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="victim_policy")
+                    setFromFlat(variables, param, self.sess)
+
                 if not self.black_box_att:
                     victim_variable = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "loss/victim_param")
                     param = load_from_file(param_pkl_path=self.env_path)
                     setFromFlat(victim_variable, param, sess=self.sess)
+                    
                 self.summary = tf.summary.merge_all()
 
     def _train_step(self, learning_rate, cliprange, obs, returns, masks, actions, values, neglogpacs,
