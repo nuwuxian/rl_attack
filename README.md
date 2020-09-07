@@ -1,16 +1,49 @@
-# rl_attack
-We implement the code both for RNN and MLP victim policy with attention mechanism.
+# RL_ATTACK
+This repo is about launching a attack in a two-agent zero-sum setting. To be sepcific, our approach extends the Proximal Policy Optimization (PPO) al-gorithm and then utilizes an explainable AI technique to guidean attacker to train an adversarial agent.
+More details can be found in our paper:
+
+```
+Adversarial Policy Training against Deep Reinforcement Learning
+Xian Wu*, Wenbo Guo*, Hua Wei*, Xinyu Xing 
+In USENIX Security 2021
+```
+
+The repo consists the following two parts:
+	- Adversarial attack and defense in Mujoco-Game
+	- Adversarial attack and defense in Pong-Game
 
 ## Dependencies
 
-Create a virtual environment by running `creatvenv.sh` script. Then install all dependencies by running `pip install -r requirements.txt`.
+This codebase uses Python 3.6.10
+For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first,  After that install all other dependencies by running `pip install -r requirements.txt`.
+For Pong-Game, you need to install install openai/roboschool first. After that install all other dependencies by running `pip install -r requirements.txt`.
 
-
-## Adversarial Train
+## Adversarial Trainining and Retraining in MuJoco-Game
 
 Start adversarial training by running 
 ```
 python adv_train.py {env_id}
 
-or sh run.sh (run 3 different seeds)
+or sh run.sh (run 5 different seeds)
 ```
+Start adversarial retraining by running
+```
+python victim_train.py {env_id}
+
+or sh run_retrain.sh (run 5 different seeds)
+```
+
+
+## Adversarial Trainining and Retraining in Pong-Game
+
+Start adversarial training by running 
+```
+python play_pong_train.py
+
+or sh run.sh (run 5 different seeds)
+```
+Start adversarial retraining by running
+```
+python play_pong_retrain.py
+
+or sh run_retrain.sh (run 5 different seeds)
