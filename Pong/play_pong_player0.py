@@ -59,6 +59,7 @@ def parse_args():
     parser.add_argument("--model_name", type=str, default="ppo1")
     parser.add_argument("--hyper_index", type=int, default=0)
     parser.add_argument("--player_index", type=int, default=0)
+    parser.add_argument("--test_model_file", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
     
     return parser.parse_args()
@@ -110,7 +111,6 @@ def advlearn(env, model_name=None, dir_dict=None):
     else:
         model = PPO1(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
                      tensorboard_log=dir_dict['tb'])
-
     try:
         model.learn(TRAINING_ITER, callback=callback, seed=SEED)
     except ValueError as e:
@@ -120,7 +120,6 @@ def advlearn(env, model_name=None, dir_dict=None):
     model.save(model_file_name)
 
 def advtrain(server_id, model_name="ppo1", dir_dict=None):
-
     env = gym.make("RoboschoolPong-v1")
     env.seed(SEED)
     env.unwrapped.multiplayer(env, game_server_guid=server_id, player_n=dir_dict["_player_index"])
@@ -133,6 +132,28 @@ def advtrain(server_id, model_name="ppo1", dir_dict=None):
         raise NotImplementedError
     advlearn(env, model_name=model_name, dir_dict=dir_dict)
 
+
+def play(env, model):
+    while True:
+        obs = env.reset()
+        while True:
+            action = model.predict(obs)[0]
+            obs, rew, done, info = env.step(action)
+            if done:
+               break
+        break
+
+def test(server_id, model_name="ppo1", dir_dict=None):
+    env = gym.make("RoboschoolPong-v1")
+    env.seed(SEED)
+    env.unwrapped.multiplayer(env, game_server_guid=server_id, play_n=dir_dict["_player_index"])
+
+    model_name = "{0}agent{1}.pkl".format(dir_dict['model'], dir_dict['_player_index'])
+
+    model = PPO1.load(model_name, env=env, timesteps_per_actorbatch=3000, tensorboard_log=dir_dict['tb'])
+    # load the pretrained_model 
+    play(env, model)
+
 args = parse_args()
 memo = args.memo
 server_id = args.server
@@ -140,7 +161,7 @@ mode = args.mod
 model_name = args.model_name.lower()
 hyper_weights_index = args.hyper_index
 player_index = args.player_index
-
+test_model_file = args.test_model_file
 hyper_weights = [0.0, -0.1, 0.0, 1, 0, 10, True, True, False]
 
 
@@ -152,6 +173,8 @@ dir_dict= {
     "_hyper_weights_index": hyper_weights_index,
     "_video": False,
     "_player_index": player_index,
+
+    "_test_model_file": _test_model_file,
 
     ## whether black box or attention
     "_black_box": hyper_weights[-3],
@@ -167,3 +190,28 @@ EXP_NAME = str(args.seed)
 if mode == "advtrain":
     make_dirs(dir_dict)
     advtrain(server_id, model_name=model_name, dir_dict=dir_dict)
+
+elif model == "advtest":
+    make_dirs(dir_dict)
+    copyfile(dir_dict["_test_model_file"], 
+            "{0}agent{1}.pkl".format(dir_dict['model'], dir_dict['_player_index']))
+    test(server_id, model_name=model_name, dir_dict=dir_dict)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

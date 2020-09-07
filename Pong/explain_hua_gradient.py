@@ -1,7 +1,6 @@
 import numpy as np
 from tensorflow.python.keras import backend as K
 import tensorflow as tf
-import pdb
 
 
 class GradientExp(object):
