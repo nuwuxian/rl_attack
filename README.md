@@ -8,9 +8,9 @@ Xian Wu*, Wenbo Guo*, Hua Wei*, Xinyu Xing
 In USENIX Security 2021
 ```
 
-The repo consists the following two parts:
-	- Adversarial attack and defense in Mujoco-Game.
-	- Adversarial attack and defense in Pong-Game.
+The repo consists the following two parts:  
+	- Adversarial attack and defense in Mujoco-Game.  
+	- Adversarial attack and defense in Pong-Game.  
 
 ## Dependencies
 
