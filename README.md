@@ -24,13 +24,13 @@ For Pong-Game, you need to install install openai/roboschool first. After that i
 
 Start adversarial training by running 
 ```
-python adv_train.py {env_id}
+python adv_train.py
 
 or sh run.sh (run 5 different seeds)
 ```
 Start adversarial retraining by running
 ```
-python victim_train.py {env_id}
+python victim_train.py
 
 or sh run_retrain.sh (run 5 different seeds)
 ```
