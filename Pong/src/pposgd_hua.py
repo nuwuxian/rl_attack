@@ -158,7 +158,7 @@ class PPO1_hua_model_value(ActorCriticRLModel):
                 if self.pretrained_mimic:
                     with tf.variable_scope("pretrained_mimic", reuse=False):
                         self.mimic_model = MimicModel(input_shape=(13,), action_shape=(2,))
-                        self.mimic_model.load("./pretrain/saved/mimic_model.h5")
+                        self.mimic_model.load("../pretrain/saved/mimic_model.h5")
 
 
                 with tf.variable_scope("loss", reuse=False):
