@@ -24,39 +24,39 @@ For Pong-Game, you need to install install openai/roboschool first. After that i
 
 Start adversarial training by running 
 ```
-python adv_train.py
+python -m MuJoCo.src.adv_train
 
-or sh run.sh (run 5 different seeds)
+or sh MuJoCo/src/run.sh (run 5 different seeds)
 ```
 Start adversarial retraining by running
 ```
-python victim_train.py
+python -m MuJoCo.src.victim_train
 
-or sh run_retrain.sh (run 5 different seeds)
+or sh MuJoCo/src/run_retrain.sh (run 5 different seeds)
 ```
 Visualizing Results
 After training done, you can find results from `agent-zoo/` folder, these includes TensorBoard logs, final model weights. 
 To plot the training curve, run
 ```
-python plot.py
+python -m MuJoCo.src.plot
 ```
 
 ## Adversarial Trainining and Retraining in Pong-Game
 
 Start adversarial training by running 
 ```
-python play_pong_train.py
+python -m Pong.src.play_pong_train
 
-or sh run.sh (run 5 different seeds)
+or sh Pong/src/run.sh (run 5 different seeds)
 ```
 Start adversarial retraining by running
 ```
-python play_pong_retrain.py
+python -m Pong.src.play_pong_retrain
 
-or sh run_retrain.sh (run 5 different seeds)
+or sh Pong/src/run_retrain.sh (run 5 different seeds)
 ```
 Visualizing Results
 After training done, you can find results from `Log/` folder. To plot the training curve, run
 ```
-python plot.py
+python -m Pong.src.plot
 ```
