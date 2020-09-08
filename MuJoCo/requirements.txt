@@ -1,0 +1,8 @@
+tensorflow==1.14.0
+numpy>=1.15
+git+git://github.com/HumanCompatibleAI/baselines.git@f70377#egg=baselines
+git+git://github.com/HumanCompatibleAI/baselines.git@906d83#egg=stable-baselines
+mujoco-py==0.5.7
+git+git://github.com/HumanCompatibleAI/gym.git@1918002#wheel=gym
+git+git://github.com/HumanCompatibleAI/multiagent-competition.git@c72348#wheel=gym_compete
+
