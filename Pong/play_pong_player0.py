@@ -146,11 +146,11 @@ def play(env, model):
 def test(server_id, model_name="ppo1", dir_dict=None):
     env = gym.make("RoboschoolPong-v1")
     env.seed(SEED)
-    env.unwrapped.multiplayer(env, game_server_guid=server_id, play_n=dir_dict["_player_index"])
+    env.unwrapped.multiplayer(env, game_server_guid=server_id, player_n=dir_dict["_player_index"])
 
     model_name = "{0}agent{1}.pkl".format(dir_dict['model'], dir_dict['_player_index'])
 
-    model = PPO1.load(model_name, env=env, timesteps_per_actorbatch=3000, tensorboard_log=dir_dict['tb'])
+    model = PPO1_hua_model_value.load(model_name, env=env, timesteps_per_actorbatch=3000, tensorboard_log=dir_dict['tb'])
     # load the pretrained_model 
     play(env, model)
 
@@ -174,7 +174,7 @@ dir_dict= {
     "_video": False,
     "_player_index": player_index,
 
-    "_test_model_file": _test_model_file,
+    "_test_model_file": test_model_file,
 
     ## whether black box or attention
     "_black_box": hyper_weights[-3],
@@ -191,27 +191,8 @@ if mode == "advtrain":
     make_dirs(dir_dict)
     advtrain(server_id, model_name=model_name, dir_dict=dir_dict)
 
-elif model == "advtest":
+elif mode == "advtest":
     make_dirs(dir_dict)
     copyfile(dir_dict["_test_model_file"], 
             "{0}agent{1}.pkl".format(dir_dict['model'], dir_dict['_player_index']))
     test(server_id, model_name=model_name, dir_dict=dir_dict)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

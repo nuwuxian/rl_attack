@@ -851,8 +851,11 @@ class PPO1_hua_model_value(ActorCriticRLModel):
         print(len(model.params))
         print('another line .....')
         print(len(params))
-        for param, loaded_p in zip(model.params, params):
-            restores.append(tf.assign(param, loaded_p))
+        for param, loaded_p in zip(model.params[0], params[0]):
+            param.assign(loaded_p)
+
+        for param, loaded_p in zip(model.params[1], params[1]):
+            param.assign(loaded_p)
         model.sess.run(restores)
 
         return model
