@@ -16,7 +16,7 @@ The repo consists the following two parts:
 
 This codebase uses Python 3.6.  
 
-For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first,  After that install all other dependencies by running `pip install -r requirements.txt`.  
+For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first. After that install all other dependencies by running `pip install -r requirements.txt`.  
 
 For Pong-Game, you need to install install openai/roboschool first. After that install all other dependencies by running `pip install -r requirements.txt`.  
 
