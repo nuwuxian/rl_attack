@@ -34,7 +34,7 @@ python -m MuJoCo.src.victim_train
 
 or sh MuJoCo/src/run_retrain.sh (run 5 different seeds)
 ```
-Visualizing Results
+Visualizing Results  
 After training done, you can find results from `agent-zoo/` folder, these includes TensorBoard logs, final model weights. 
 To plot the training curve, run
 ```
@@ -55,7 +55,7 @@ python -m Pong.src.play_pong_retrain
 
 or sh Pong/src/run_retrain.sh (run 5 different seeds)
 ```
-Visualizing Results
+Visualizing Results  
 After training done, you can find results from `Log/` folder. To plot the training curve, run
 ```
 python -m Pong.src.plot
