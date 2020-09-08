@@ -14,9 +14,11 @@ The repo consists the following two parts:
 
 ## Dependencies
 
-This codebase uses Python 3.6.10.
-For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first,  After that install all other dependencies by running `pip install -r requirements.txt`.
-For Pong-Game, you need to install install openai/roboschool first. After that install all other dependencies by running `pip install -r requirements.txt`.
+This codebase uses Python 3.6.  
+
+For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first,  After that install all other dependencies by running `pip install -r requirements.txt`.  
+
+For Pong-Game, you need to install install openai/roboschool first. After that install all other dependencies by running `pip install -r requirements.txt`.  
 
 ## Adversarial Trainining and Retraining in MuJoco-Game
 
@@ -32,7 +34,12 @@ python victim_train.py {env_id}
 
 or sh run_retrain.sh (run 5 different seeds)
 ```
-
+Visualizing Results
+After training done, you can find results from `agent-zoo/` folder, these includes TensorBoard logs, final model weights. 
+To plot the training curve, run
+```
+python plot.py
+```
 
 ## Adversarial Trainining and Retraining in Pong-Game
 
@@ -47,3 +54,12 @@ Start adversarial retraining by running
 python play_pong_retrain.py
 
 or sh run_retrain.sh (run 5 different seeds)
+```
+Visualizing Results
+After training done, you can find results from `Log/` folder. To plot the training curve, run
+```
+python plot.py
+```
+
+
+
