@@ -9,7 +9,7 @@ In USENIX Security 2021
 ```
 
 The repo consists the following two parts:  
-  - Adversarial attack and defense in Mujoco-Game.  
+  - Adversarial attack and defense in MuJoCo-Game.  
   - Adversarial attack and defense in Pong-Game.  
 
 ## Dependencies
@@ -20,7 +20,7 @@ For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first. After that in
 
 For Pong-Game, you need to install install openai/roboschool first. After that install all other dependencies by running `pip install -r Pong/requirements.txt`.  
 
-## Adversarial Trainining and Retraining in MuJoco-Game
+## Adversarial Trainining and Retraining in MuJoCo-Game
 
 Start adversarial training by running 
 ```
