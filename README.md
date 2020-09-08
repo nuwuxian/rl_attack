@@ -1,5 +1,5 @@
 # RL-ATTACK
-This repo is about launching a attack in a two-agent zero-sum setting. To be sepcific, our approach extends the Proximal Policy Optimization (PPO) algorithm and then utilizes an explainable AI technique to guidean attacker to train an adversarial agent.
+This repo is about adversarial attacks against reinforcement learning in a two-agent zero-sum game settin. To be sepcific, our approach extends the Proximal Policy Optimization (PPO) algorithm and then utilizes an explainable AI technique to guidean attacker to train an adversarial agent.
 More details can be found in our paper:
 
 ```
