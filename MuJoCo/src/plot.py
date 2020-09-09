@@ -85,13 +85,12 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
             if reverse:
                 events = load_tb_data(os.path.join(log_dir, method), keys=['game_win0'])
                 subset = data_frame(events, game=game)
-                #subset['game_win1'] = 1.0 - subset['game_win1']
                 group = subset.groupby('step')['game_win0']
 
             else:
-                events = load_tb_data(os.path.join(log_dir, method), keys=['game_norm_win1'])
+                events = load_tb_data(os.path.join(log_dir, method), keys=['game_win1'])
                 subset = data_frame(events, game=game)
-                group = subset.groupby('index')['game_norm_win1']
+                group = subset.groupby('index')['game_win1']
         else:
             if reverse:
                 events = load_tb_data(os.path.join(log_dir, method), keys=['game_win1'])
@@ -125,25 +124,12 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
 
 
         min_n, mean, max_n = group.min()[0:length+1], group.mean()[0:length+1], group.max()[0:length+1]
-
-        '''
-        min_adv_n, mean_adv, max_adv_n = group_adv.min()[0:length + 1], group_adv.mean()[0:length + 1], group_adv.max()[0:length + 1]
-        min_norm_n, mean_norm, max_norm_n = group_norm.min()[0:length + 1], group_norm.mean()[0:length + 1], group_norm.max()[0:length + 1]
-        '''
-
-
-        #mean.index /= 2
-
         print('%s: min: %.4f, mean: %.4f, max: %.4f.' % (method, max(min_n), max(mean), max(max_n)))
         std.append(group.std()[0:length+1])
         ax.fill_between(x=mean.index, y1=min_n, y2=max_n, alpha=0.4, color=colors[i])
         mean.plot(ax=ax, color=colors[i], linewidth=3)
 
     ax.set_xticks([0, 0.5e+7, 1e+7, 1.5e+7, 2e+7])
-    #ax.set_xticks([0, 1.5e+7, 2.5e+7, 3.5e+7])
-    #ax.set_xticks([0, 0.5e+7, 1e+7, 1.5e+7, 2e+7, 2.5e+7, 3e+7, 3.5e+7])
-    # ax.set_yticks([0, 0.05, 0.1, 0.2, 1])
-    #ax.set_yticks([0, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1])
     ax.set_yticks([0, 0.5, 1])
     plt.grid(True)
     fig.savefig(out_dir + '/' + filename)
@@ -160,8 +146,8 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_seed", type=int, default=6)
-    parser.add_argument('--log_dir', type=str, default='/home/xkw5132/Desktop/usenix_paper/Mujoco_results/usenix2020_data/vs_lamda')
-    parser.add_argument("--out_dir", type=str, default='/home/xkw5132/Desktop/usenix_paper/Mujoco_results/usenix2020_data/vs_lamda')
+    parser.add_argument('--log_dir', type=str, default=None)
+    parser.add_argument("--out_dir", type=str, default=None)
     parser.add_argument("--filename", type=str, default='out.png')
     args = parser.parse_args()
     reverse = True
