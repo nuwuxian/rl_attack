@@ -73,7 +73,8 @@ if __name__=="__main__":
         scheduler = Scheduler(annealer_dict={'lr': ConstantAnnealer(learning_rate)})
         env_name = env_list[args.env]
         # define the env_path
-        env_path = get_zoo_path(env_name, tag=2)
+        # env_path = get_zoo_path(env_name, tag=2)
+        env_path = '../agent-zoo/agent/YouShallNotPass_agent.pkl'
         env = gym.make(env_name)
         venv = SubprocVecEnv([lambda: make_zoo_multi2single_env(env_name) for i in range(n_cpu)])
         venv = Monitor(venv, 1)
