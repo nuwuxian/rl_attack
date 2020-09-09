@@ -35,7 +35,7 @@ python -m MuJoCo.src.victim_train
 or sh MuJoCo/src/run_retrain.sh (run 5 different seeds)
 ```
 Visualizing Results  
-After training done, you can find results from `agent-zoo/` folder, these includes TensorBoard logs, final model weights. 
+After training done, you can find results from `agent-zoo/` folder, these include TensorBoard logs, final model weights. 
 We put our paper's results in the folder `results/`.
 To plot the winning-rate curve, run
 ```
