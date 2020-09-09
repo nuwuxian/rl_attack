@@ -76,13 +76,13 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
     #colors = ['r', 'g', 'b']
     # ['orangered', 'darkgreen', '#0165FC']
     #colors = ['orangered', '#0165FC', 'darkgreen']
-    colors = ['r', 'b', 'g', 'y']
-    methods = ['our', 'ratio-2', 'ratio-3', 'ratio-4']
+    colors = ['r']
+    methods = ['our']
     std = []
     for i in range(len(methods)):
         method = methods[i]
         if game == "YouShallNotPass":
-            if reverse:
+            if not reverse:
                 events = load_tb_data(os.path.join(log_dir, method), keys=['game_win0'])
                 subset = data_frame(events, game=game)
                 group = subset.groupby('step')['game_win0']
@@ -146,11 +146,11 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_seed", type=int, default=6)
-    parser.add_argument('--log_dir', type=str, default=None)
-    parser.add_argument("--out_dir", type=str, default=None)
+    parser.add_argument('--log_dir', type=str, default="../results/adv_train")
+    parser.add_argument("--out_dir", type=str, default="../results/adv_train")
     parser.add_argument("--filename", type=str, default='out.png')
     args = parser.parse_args()
-    reverse = True
+    reverse = False
 
     game = 'YouShallNotPass'
     #game = 'KickAndDefend'
