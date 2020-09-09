@@ -7,8 +7,6 @@ from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras import backend as K
 import pickle as pkl
 import os
-import pdb
-
 
 
 def RL_func(input_dim, num_class):
@@ -110,21 +108,6 @@ class RL_model(object):
         return 0
 
 if __name__ == "__main__":
-    '''
-    filename = '../agent-zoo/data/train_data'
-    out_filename = './saved/opp_var'
-
-    opp_obs, opp_act, adv_act, opp_next_obs = load_data(filename)
-    
-    data_X_true = np.concatenate((opp_obs, opp_act, adv_act), axis=1)
-    data_Y_true = opp_next_obs
-    
-    x_mean, x_var, data_X_true = norm(data_X_true)
-    y_mean, y_var, data_Y_true = norm(data_Y_true)
-    with open(out_filename, 'wb') as writer:
-      pkl.dump([x_mean, x_var, y_mean, y_var], writer, pkl.HIGHEST_PROTOCOL)
-    writer.close()
-    '''
     out_filename = '/home/xkw5132/Adv_RL/src/modelfree/policies/saved/policy_data.pkl'
     with open(out_filename, 'rb') as f:
         [opp_obs, opp_acts] = pkl.load(f)
