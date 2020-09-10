@@ -50,7 +50,7 @@ lines_names = []
 colors = ["red",'blue',"g", 'y']
 #colors = ["red","g"]
 
-base_folder = "../results/adv_train/our"
+base_folder = "../results/adv_train"
 file_folders = []
 
 for file_folder in os.listdir(base_folder):
