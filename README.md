@@ -22,6 +22,8 @@ For Pong-Game, you need to install install OpenAI/Roboschool first. After that i
 
 ## Adversarial Trainining and Retraining in MuJoCo-Game
 
+`MuJoCo/multiagent-competition/agent-zoo` folder contains the victim agent in MuJoCo-Game. `MuJoCo/agent-zoo/agent` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `MuJoCo/adv-agent` folder contains the adversarial agent trained by our method which are used for adversarial retraining. 
+
 Start adversarial training by running 
 ```
 python -m MuJoCo.src.adv_train
