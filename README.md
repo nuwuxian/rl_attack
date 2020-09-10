@@ -21,7 +21,7 @@ For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first. After that in
 For Pong-Game, you need to install install OpenAI/Roboschool first. After that install all other dependencies by running `pip install -r Pong/requirements.txt`.  
 
 ## Adversarial Trainining and Retraining in MuJoCo-Game
-You can find the victim agent in `MuJoCo/multiagent-competition/agent-zoo` folder. `MuJoCo/agent-zoo/agent` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `MuJoCo/adv-agent` folder contains the adversarial agent trained by our method which are used for adversarial retraining. 
+You can find the victim agent in `MuJoCo/multiagent-competition/agent-zoo` folder. `MuJoCo/agent-zoo/agent` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `MuJoCo/adv-agent` folder contains the adversarial agent trained by our method which is used for adversarial retraining. 
 
 Start adversarial training by running 
 ```
@@ -44,7 +44,7 @@ python -m MuJoCo.src.plot
 ```
 
 ## Adversarial Trainining and Retraining in Pong-Game
-You can find the victim agent in `Pong/src/RoboschoolPong_v0_2017may1.py`. `Pong/pretrained/save` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `Pong/adv-model` folder contains the adversarial agent trained by our method which are used for adversarial retraining. 
+You can find the victim agent in `Pong/src/RoboschoolPong_v0_2017may1.py`. `Pong/pretrained/save` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `Pong/adv-model` folder contains the adversarial agent trained by our method which is used for adversarial retraining. 
 
 Start adversarial training by running 
 ```
