@@ -18,7 +18,7 @@ This codebase uses Python 3.6.
 
 For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first. After that install all other dependencies by running `pip install -r MuJoCo/requirements.txt`.  
 
-For Pong-Game, you need to install install openai/roboschool first. After that install all other dependencies by running `pip install -r Pong/requirements.txt`.  
+For Pong-Game, you need to install install OpenAI/Roboschool first. After that install all other dependencies by running `pip install -r Pong/requirements.txt`.  
 
 ## Adversarial Trainining and Retraining in MuJoCo-Game
 
