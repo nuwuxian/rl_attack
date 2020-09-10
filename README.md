@@ -44,7 +44,7 @@ python -m MuJoCo.src.plot
 ```
 
 ## Adversarial Trainining and Retraining in Pong-Game
-You can find the victim agent in `Pong/src/RoboschoolPong_v0_2017may1.py`. `Pong/pretrain/saved` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `Pong/adv-model` folder contains the adversarial agent trained by our method which is used for adversarial retraining. 
+You can find the victim agent in `Pong/src/RoboschoolPong_v0_2017may1.py`. `Pong/pretrain/saved` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `Pong/adv_model` folder contains the adversarial agent trained by our method which is used for adversarial retraining. 
 
 Start adversarial training by running 
 ```
