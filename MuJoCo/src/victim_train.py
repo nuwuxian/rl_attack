@@ -68,7 +68,7 @@ if __name__=="__main__":
         parser.add_argument("--ratio", type=int, default=0)
         parser.add_argument('--root_dir', type=str, default="../agent-zoo")
         parser.add_argument('--exp_name', type=str, default="ppo2")
-        parser.add_argument('--adv_agent_path', type=str, default='../adv_agent/model.pkl')
+        parser.add_argument('--adv_agent_path', type=str, default='../adv_agent/model.npy')
         parser.add_argument('--adv_agent_norm_path', type=str, default='../adv_agent/obs_rms.pkl')
 
         args = parser.parse_args()
