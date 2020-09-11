@@ -5,7 +5,7 @@ import roboschool, multiplayer
 
 # We assume the Game Server running forever
 # Set a Large number: 10000256
-INF = 10000256
+INF = 4000000 
 
 def parse_args():
 
