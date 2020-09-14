@@ -101,11 +101,10 @@ def callback(_locals, _globals):
 
 def advlearn(env, model_name=None, dir_dict=None):
 
-    # assert model_name == 'ppo1'
-
     _, _ = setup_logger(SAVE_DIR, EXP_NAME)
 
     if model_name == 'ppo1_hua_oppomodel':
+        ## inline hyperparameters
         model = PPO1_hua_model_value(MlpPolicy_hua, env, timesteps_per_actorbatch=1000, verbose=1,
                          tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
                          benigned_model_file=None, full_tensorboard_log=False,

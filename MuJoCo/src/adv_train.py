@@ -22,9 +22,23 @@ rew_shape_params = {'weights': {'dense': {'reward_move': 0.1}, \
                     'sparse': {'reward_remaining': 0.01}}, 'anneal_frac': 0}
 
 
+
 ## inline parameters
 ## include gamma, training_iter, ent_coef, noptepoches, learning_rate, n_steps.
 ## For Fair comparsion, we set the same as the ICLR 2020 paper "Adversarial Policies: Attacking Deep Reinforcement Learning"
+
+#  param gamma: (float) Discount factor
+#  param traning_iter: (int) Training iterations.
+#  param n_steps: (int) The number of steps to run for each environment per update
+#  (i.e. batch size is n_steps * n_env where n_env is number of environment copies running in parallel)
+#  param ent_coef: (float) Entropy coefficient for the loss calculation
+#  param learning_rate: (float or callable) The learning rate, it can be a function
+#  param nminibatches: (int) Number of training minibatches per update
+#  param noptepochs: (int) Number of epoch when optimizing
+#  param n_cpu: number of environments copies running in parallel
+#  param log_interval: The training interval to print the winning/losing information
+
+
 gamma = 0.99
 training_iter = 20000000
 ent_coef = 0.00
@@ -32,7 +46,7 @@ nminibatches = 4
 noptepochs = 4
 learning_rate = 3e-4
 n_steps = 2048
-checkpoint_step = 1000000
+
 
 callback_key = 'update'
 callback_mul = 16384
@@ -63,9 +77,6 @@ if __name__=="__main__":
         parser = argparse.ArgumentParser()
         parser.add_argument("env", type=int, default=2)
         parser.add_argument("--seed", type=int, default=0)
-        parser.add_argument("--load", type=int, default=0)
-        parser.add_argument("--render", type=int, default=0)
-        parser.add_argument("--reverse", type=int, default=0)
         parser.add_argument("--ratio", type=int, default=1)
         parser.add_argument("--x_method", type=str, default="grad")
         parser.add_argument('--root_dir', type=str, default="../agent-zoo")
