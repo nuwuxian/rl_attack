@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
 for i in 0 1 2 3 4; do
-    python play_pong_retrain.py --hyper_index $i > console_$i.txt &
+    python play_pong_retrain.py --hyper_index $i --x_method='grad'> console_$i.txt &
     sleep 10
 done
