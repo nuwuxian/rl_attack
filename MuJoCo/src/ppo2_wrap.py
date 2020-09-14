@@ -36,7 +36,7 @@ class MyPPO2(ActorCriticRLModel):
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False, 
                  hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False], mix_ratio=1.0, model_saved_loc=None, 
-                 env_name=None, env_path=None, retrain_victim=False, norm_victim=False, exp_method='grad'):
+                 env_name=None, env_path=None, mimic_model_path=None, retrain_victim=False, norm_victim=False, exp_method='grad'):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                       _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -84,6 +84,8 @@ class MyPPO2(ActorCriticRLModel):
         self.env = env
         self.env_name = env_name
         self.env_path = env_path
+
+        self.mimic_model_path = mimic_model_path
 
         self._train_mimic = None
         self.model_saved_loc = model_saved_loc
@@ -172,7 +174,7 @@ class MyPPO2(ActorCriticRLModel):
                     with tf.variable_scope("mimic_model", reuse=False):
                          self.mimic_model = RL_model(input_shape=self.observation_space.shape, \
                                                   out_shape=self.action_space.shape)
-                         self.mimic_model.load('../agent-zoo/agent/mimic_model.h5')
+                         self.mimic_model.load(self.mimic_model_path)
 
                 with tf.variable_scope("loss", reuse=False):
 

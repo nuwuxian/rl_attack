@@ -69,13 +69,18 @@ if __name__=="__main__":
         parser.add_argument("--ratio", type=int, default=1)
         parser.add_argument("--x_method", type=str, default="grad")
         parser.add_argument('--root_dir', type=str, default="../agent-zoo")
+        # surrogate model
+        parser.add_argument('--surrogate_model', type=str, default="../agent-zoo/agent/YouShallNotPass_agent.pkl")
+        parser.add_argument('--mimic_model_path', type=str, default="../agent-zoo/agent/mimic_model.h5")
+
         parser.add_argument('--exp_name', type=str, default="ppo2")
         args = parser.parse_args()
 
         scheduler = Scheduler(annealer_dict={'lr': ConstantAnnealer(learning_rate)})
         env_name = env_list[args.env]
         # define the env_path
-        env_path = '../agent-zoo/agent/YouShallNotPass_agent.pkl'
+        env_path = args.surrogate_model
+        mimic_model_path = args.mimic_model_path
         env = gym.make(env_name)
         venv = SubprocVecEnv([lambda: make_zoo_multi2single_env(env_name) for i in range(n_cpu)])
         venv = Monitor(venv, 1)
@@ -90,7 +95,8 @@ if __name__=="__main__":
                        ent_coef=ent_coef,  nminibatches=nminibatches, noptepochs=noptepochs, 
                        learning_rate=learning_rate, verbose=1,  n_steps=n_steps, gamma=gamma, 
                        tensorboard_log=out_dir, model_saved_loc=out_dir, env_name=env_name, 
-                       env_path=env_path, mix_ratio=args.ratio, exp_method=args.x_method) # , rl_path=rl_path, var_path=var_path)
+                       env_path=env_path, mimic_model_path=mimic_model_path,
+                       mix_ratio=args.ratio, exp_method=args.x_method)
         
         Adv_train(venv, training_iter, callback_key, callback_mul, logger)
         model.save(os.path.join(args.root_dir, env_name.split('/')[1]))

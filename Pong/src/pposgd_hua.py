@@ -37,7 +37,7 @@ class PPO1_hua_model_value(ActorCriticRLModel):
                  schedule='linear', verbose=0, tensorboard_log=None,
                  _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False, hyper_weights=[0.,0.,0.,0.,0.,0.],
                  benigned_model_file=None, black_box_att=False, attention_weights=False, model_saved_loc=None,
-                 clipped_attention=False, exp_method='grad'):
+                 clipped_attention=False, exp_method='grad', mimic_model_path=None):
 
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -86,6 +86,7 @@ class PPO1_hua_model_value(ActorCriticRLModel):
             self.pretrained_mimic = False
 
         self.benigned_model_file = benigned_model_file
+        self.mimic_model_path = mimic_model_path
 
         if self.benigned_model_file is not None: # attacking an self_trained model
             self.benigned_model_file_meta_file = self.tensorboard_log+'oppopi'
@@ -138,7 +139,7 @@ class PPO1_hua_model_value(ActorCriticRLModel):
                 if self.pretrained_mimic:
                     with tf.variable_scope("pretrained_mimic", reuse=False):
                         self.mimic_model = MimicModel(input_shape=(13,), action_shape=(2,))
-                        self.mimic_model.load("../pretrain/saved/mimic_model.h5")
+                        self.mimic_model.load(self.mimic_model_path)
 
 
                 with tf.variable_scope("loss", reuse=False):
@@ -796,10 +797,6 @@ class PPO1_hua_model_value(ActorCriticRLModel):
         #model.load_parameters(params)
         # Loading parameters
         restores = []
-
-        print(len(model.params))
-        print('another line .....')
-        print(len(params))
         for param, loaded_p in zip(model.params[0], params[0]):
             param.assign(loaded_p)
 
@@ -994,17 +991,6 @@ class PPO1_hua_model_value(ActorCriticRLModel):
 
         return obs_oppo_predict, obs_oppo_predict_noise
 
-    def calculate_attention(self, obs_oppo, cur_lambda, exp_test=None):
-        if self.use_explaination:
-            assert exp_test != None
-            grads = exp_test.grad(obs_oppo)
-            if not self.masking_attention:
-                return np.max(grads[:, 4:8], axis=1) * self.hyper_weights[5] * cur_lambda
-            else: # todo now the grads are used to combine weight the observations
-                return grads*self.hyper_weights[5] * cur_lambda
-        else:
-        #   return np.ones(obs_oppo.shape[0])
-            return 49 * np.random.random_sample(obs_oppo.shape[0]) + 1
     # define the new attention
     def calculate_new_attention(self, obs_oppo, cur_lamda, exp_test=None, exp_method='grad'):
         if self.use_explaination:
