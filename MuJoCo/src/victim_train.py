@@ -72,6 +72,9 @@ if __name__=="__main__":
         parser.add_argument('--adv_agent_norm_path', type=str, default='../adv_agent/obs_rms.pkl')
         parser.add_argument('--x_method', type=str, default='grad')
 
+        parser.add_argument('--surrogate_model', type=str, default="../agent-zoo/agent/YouShallNotPass_agent.pkl")
+        parser.add_argument('--mimic_model_path', type=str, default="../agent-zoo/agent/mimic_model.h5")
+
         args = parser.parse_args()
         adv_agent_path = args.adv_agent_path
         adv_agent_norm_path = args.adv_agent_norm_path
@@ -79,7 +82,11 @@ if __name__=="__main__":
         scheduler = Scheduler(annealer_dict={'lr': ConstantAnnealer(learning_rate)})
         env_name = env_list[args.env]
         # define the env_path
-        env_path = '../agent-zoo/agent/YouShallNotPass_agent.pkl'
+
+
+        env_path = args.surrogate_model
+        mimic_model_path = args.mimic_model_path
+
         env = gym.make(env_name)
         venv = SubprocVecEnv([lambda: make_adv_multi2single_env(env_name, adv_agent_path, adv_agent_norm_path, False) for i in range(n_cpu)])
         venv = Monitor(venv, 0)
@@ -95,8 +102,8 @@ if __name__=="__main__":
                        nminibatches=nminibatches, noptepochs=noptepochs,
                        learning_rate=learning_rate,  verbose=1,
                        n_steps=n_steps, gamma=gamma, tensorboard_log=out_dir,
-                       model_saved_loc=out_dir, env_name=env_name, env_path=env_path, 
-                       mix_ratio=args.ratio, retrain_victim=True, norm_victim=True, exp_method=args.x_method) # , rl_path=rl_path, var_path=var_path)
+                       model_saved_loc=out_dir, env_name=env_name, env_path=env_path, mimic_model_path=mimic_model_path, 
+                       mix_ratio=args.ratio, retrain_victim=True, norm_victim=True, exp_method=args.x_method)
         
         Adv_train(venv, training_iter, callback_key, callback_mul, logger)
         model.save(os.path.join(args.root_dir, env_name.split('/')[1]))
