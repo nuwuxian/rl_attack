@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("--model_name", type=str, default="ppo1_hua_oppomodel")
     parser.add_argument("--hyper_index", type=int, default=3)
     # seed value
+    parser.add_argument("--x_method", type=str, default="grad")
     parser.add_argument("--seed", type=int, default=0)
 
     return parser.parse_args()
@@ -31,6 +32,7 @@ model_name = args.model_name
 hyper_index = args.hyper_index
 
 seed = args.seed
+x_method = args.x_method
 
 
 # create the gameserver, the same as enviroment
@@ -41,8 +43,8 @@ gameserver = multiplayer.SharedMemoryServer(game, game_server_id, want_test_wind
 # setting up the player 0
 player_0_args = "--memo={0} --server={1} " \
                 "--mod={2} --model_name={3} --hyper_index={4} " \
-                "--seed={5}".format(memo, game_server_id, mode,
-                model_name, hyper_index, seed)
+                "--seed={5} --x_method={6}".format(memo, game_server_id, mode,
+                model_name, hyper_index, seed, x_method)
 
 player_0_args = player_0_args.split(" ")
 

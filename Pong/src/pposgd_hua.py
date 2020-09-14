@@ -30,36 +30,14 @@ import pdb
 
 class PPO1_hua_model_value(ActorCriticRLModel):
     """
-    Proximal Policy Optimization algorithm (MPI version).
-    Paper: https://arxiv.org/abs/1707.06347
-
-    :param env: (Gym environment or str) The environment to learn from (if registered in Gym, can be str)
-    :param policy: (ActorCriticPolicy or str) The policy model to use (MlpPolicy, CnnPolicy, CnnLstmPolicy, ...)
-    :param timesteps_per_actorbatch: (int) timesteps per actor per update
-    :param clip_param: (float) clipping parameter epsilon
-    :param entcoeff: (float) the entropy loss weight
-    :param optim_epochs: (float) the optimizer's number of epochs
-    :param optim_stepsize: (float) the optimizer's stepsize
-    :param optim_batchsize: (int) the optimizer's the batch size
-    :param gamma: (float) discount factor
-    :param lam: (float) advantage estimation
-    :param adam_epsilon: (float) the epsilon value for the adam optimizer
-    :param schedule: (str) The type of scheduler for the learning rate update ('linear', 'constant',
-        'double_linear_con', 'middle_drop' or 'double_middle_drop')
-    :param verbose: (int) the verbosity level: 0 none, 1 training information, 2 tensorflow debug
-    :param tensorboard_log: (str) the log location for tensorboard (if None, no logging)
-    :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
-    :param policy_kwargs: (dict) additional arguments to be passed to the policy on creation
-    :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
-        WARNING: this logging can take a lot of space quickly
+    Implementation of our loss function, refer the original ppo algorithm
     """
-
     def __init__(self, policy, env, gamma=0.99, timesteps_per_actorbatch=256, clip_param=0.2, entcoeff=0.01,
                  optim_epochs=4, optim_stepsize=1e-3, optim_batchsize=64, lam=0.95, adam_epsilon=1e-5,
                  schedule='linear', verbose=0, tensorboard_log=None,
                  _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False, hyper_weights=[0.,0.,0.,0.,0.,0.],
                  benigned_model_file=None, black_box_att=False, attention_weights=False, model_saved_loc=None,
-                 clipped_attention=False):
+                 clipped_attention=False, exp_method='grad'):
 
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -100,6 +78,8 @@ class PPO1_hua_model_value(ActorCriticRLModel):
         self.model_saved_loc = model_saved_loc
 
         self.black_box_att = black_box_att
+        self.exp_method = exp_method
+
         if self.black_box_att:
             self.pretrained_mimic = True
         else:
@@ -186,15 +166,6 @@ class PPO1_hua_model_value(ActorCriticRLModel):
                     action_mask_ph = tf.placeholder(dtype=tf.float32, shape=action_ph.shape, name="action_mask_ph")
                     state_value_opp_next_ph = tf.placeholder(dtype=tf.float32, shape=[None], name="state_value_opp_next_ph")
 
-                    #todo: manipulate part of the opp obs by the action of current action_ph * 0.1 (60 frames per second)
-                    # delta_obs_change = tf.concat([tf.zeros([tf.shape(action_ph)[0], 4], dtype=tf.float32),
-                    #                                 action_ph[:,0:1]*self.dt,
-                    #                                 -obs_opp_ph[:,5:6]+action_ph[:, 0:1],
-                    #                                 action_ph[:,1:]*self.dt,
-                    #                                 -obs_opp_ph[:,7:8]+action_ph[:, 1:],
-                    #                                 tf.zeros([tf.shape(action_ph)[0], 5], dtype=tf.float32)], -1)
-                    # obs_opp_mal = tf.add(delta_obs_change,obs_opp_ph)
-
                     # Todo network for modeling oppo current observation, given my current observation and my previous action
                     obs_next_ph = tf.placeholder(dtype=tf.float32, shape=obs_ph.shape, name="obs_next_ph")
                     self.obs_next_ph = obs_next_ph
@@ -202,24 +173,12 @@ class PPO1_hua_model_value(ActorCriticRLModel):
 
                     with tf.variable_scope("statem", reuse=True):
                         obs_oppo_predict, obs_oppo_noise_predict = self.modeling_state(action_ph, action_ph_noise, obs_ph)
-                    '''
-                    obs_opp_mal = tf.concat([obs_oppo_predict,
-                                             obs_next_ph[:, 0:4],
-                                             obs_next_ph[:, 8:]],
-                                            -1, name="obs_oppo_predict")
-                    '''
+
                     obs_opp_mal = tf.concat([obs_oppo_predict,
                                              tf.multiply(obs_next_ph[:,0:4],tf.constant([-1.0, -1.0, 1.0, 1.0])),
                                              tf.multiply(obs_next_ph[:,8:],tf.constant([-1.0, -1.0, 1.0, 1.0, 1.0]))],
                                             -1, name="obs_oppo_predict")
-                    # We keep self's observation since we want the agent to take action
-                    # that change the oppo's action most between similar positions
-                    '''
-                    obs_opp_mal_noise = tf.concat([obs_oppo_noise_predict,
-                                                   obs_next_ph[:, 0:4],
-                                                   obs_next_ph[:, 8:]],
-                                            -1, name="obs_oppo_predict_noise")
-                    '''
+
                     obs_opp_mal_noise = tf.concat([obs_oppo_noise_predict,
                                              tf.multiply(obs_next_ph[:, 0:4], tf.constant([-1.0, -1.0, 1.0, 1.0])),
                                              tf.multiply(obs_next_ph[:, 8:], tf.constant([-1.0, -1.0, 1.0, 1.0, 1.0]))],
@@ -565,16 +524,6 @@ class PPO1_hua_model_value(ActorCriticRLModel):
                     # set old parameter values to new parameter values
                     self.assign_old_eq_new(sess=self.sess)
 
-                    # Here we do a bunch of optimization epochs over the data
-
-                    # first we optimize over the mimic model
-                    '''
-                    # train mimic model
-                    if iters_so_far % 10 == 0:
-                        # get the observation and action
-                        obs_list.append(obs_opp_ph)
-                        act_list.append(action_oppo_ph)
-                    '''
                     print("modeling state weight: ", self.sess.run(self.modeling_state_w)[0])
                     # print("modeling oppo weight: ", self.sess.run(self.modeling_oppo_w)[0])
                     # print("mimic model weights: ", self.mimic_model.model.layers[0].get_weights()[0])
@@ -1057,10 +1006,15 @@ class PPO1_hua_model_value(ActorCriticRLModel):
         #   return np.ones(obs_oppo.shape[0])
             return 49 * np.random.random_sample(obs_oppo.shape[0]) + 1
     # define the new attention
-    def calculate_new_attention(self, obs_oppo, cur_lamda, exp_test=None):
+    def calculate_new_attention(self, obs_oppo, cur_lamda, exp_test=None, exp_method='grad'):
         if self.use_explaination:
             assert exp_test != None
-            grads = exp_test.integratedgrad(obs_oppo)
+            if exp_method == 'grad':
+               grads = exp_test.grad(obs_oppo)
+            elif exp_method == 'integratedgrad':
+               grads = exp_test.integratedgrad(obs_oppo)
+            elif exp_method == 'smoothgrad':
+               grads = exp_test.smoothgrad(obs_oppo)
 
             oppo_action = exp_test.output(obs_oppo)
             if not self.masking_attention:

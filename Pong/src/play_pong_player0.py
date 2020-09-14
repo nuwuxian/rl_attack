@@ -60,8 +60,10 @@ def parse_args():
     parser.add_argument("--hyper_index", type=int, default=0)
     parser.add_argument("--player_index", type=int, default=0)
     parser.add_argument("--test_model_file", type=str, default=None)
+
     parser.add_argument("--seed", type=int, default=0)
-    
+    parser.add_argument("--x_method", type=str, default='grad')
+
     return parser.parse_args()
 
 def callback(_locals, _globals):
@@ -107,7 +109,8 @@ def advlearn(env, model_name=None, dir_dict=None):
                          tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
                          benigned_model_file=None, full_tensorboard_log=False,
                          black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
-                         model_saved_loc=dir_dict['model'], clipped_attention=dir_dict['_clipped_attention'])
+                         model_saved_loc=dir_dict['model'], clipped_attention=dir_dict['_clipped_attention'], 
+                         exp_method=dir_dict['_x_method'])
     else:
         model = PPO1(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
                      tensorboard_log=dir_dict['tb'])
@@ -181,6 +184,7 @@ dir_dict= {
     "_attention": hyper_weights[-2],
     "_clipped_attention": hyper_weights[-1],
     "_seed": args.seed,
+    "_x_method": args.x_method
 }
 
 SAVE_DIR = './agent_zoo/'+ "Pong"
