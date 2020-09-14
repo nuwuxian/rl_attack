@@ -185,7 +185,7 @@ dir_dict= {
     "_attention": hyper_weights[-2],
     "_clipped_attention": hyper_weights[-1],
     "_seed": args.seed,
-    "_x_method": args.x_method
+    "_x_method": args.x_method,
     "_mimic_model_path": args.mimic_model_path
 }
 
