@@ -25,9 +25,7 @@ import cloudpickle
 import os
 from mimic_action import MimicModel
 
-
-
-class PPO1_hua_model_value(ActorCriticRLModel):
+class PPO1_model_value(ActorCriticRLModel):
     """
     Implementation of our loss function, refer the original ppo algorithm
     """

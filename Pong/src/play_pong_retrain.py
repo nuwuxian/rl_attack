@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument("--mod", type=str, default="advtest")
 
     # model_name (previous distinguish ppo2 and ppo1, now is ppo)
-    parser.add_argument("--model_name", type=str, default="ppo1_hua_oppomodel")
+    parser.add_argument("--model_name", type=str, default="ppo1_oppomodel")
     parser.add_argument("--adv_model", type=str, default="../adv_model/best_model.pkl")
 
 

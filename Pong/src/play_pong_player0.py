@@ -10,8 +10,7 @@ import gym
 import roboschool
 from stable_baselines.common.policies import MlpPolicy,MlpLstmPolicy
 from stable_baselines import PPO1, PPO2
-from policies import MlpPolicy_hua
-from pposgd_hua import PPO1_hua_model_value
+from pposgd_wrap import PPO1_model_value
 
 from stable_baselines.common.vec_env import DummyVecEnv,SubprocVecEnv, VecVideoRecorder
 from stable_baselines.results_plotter import load_results, ts2xy
@@ -103,9 +102,9 @@ def advlearn(env, model_name=None, dir_dict=None):
 
     _, _ = setup_logger(SAVE_DIR, EXP_NAME)
 
-    if model_name == 'ppo1_hua_oppomodel':
+    if model_name == 'ppo1_oppomodel':
         ## inline hyperparameters
-        model = PPO1_hua_model_value(MlpPolicy_hua, env, timesteps_per_actorbatch=1000, verbose=1,
+        model = PPO1_model_value(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
                          tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
                          benigned_model_file=None, full_tensorboard_log=False,
                          black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
