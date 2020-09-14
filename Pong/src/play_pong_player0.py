@@ -105,7 +105,9 @@ def advlearn(env, model_name=None, dir_dict=None):
     if model_name == 'ppo1_oppomodel':
         ## inline hyperparameters
         ## param timesteps_per_actorbatch: timesteps per actor per update
-        model = PPO1_model_value(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
+        ## param entcoeff: Entropy coefficient for the loss calculation
+        ## other inline hyperparameters is by default choice in file 'PPO1_model_value'
+        model = PPO1_model_value(MlpPolicy, env, timesteps_per_actorbatch=1000, entcoeff = 0, verbose=1,
                          tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
                          benigned_model_file=None, full_tensorboard_log=False,
                          black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
