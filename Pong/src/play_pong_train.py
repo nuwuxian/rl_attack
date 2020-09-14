@@ -41,7 +41,6 @@ game_server_id = args.server+"{0}".format(hyper_index)
 game = roboschool.gym_pong.PongSceneMultiplayer()
 gameserver = multiplayer.SharedMemoryServer(game, game_server_id, want_test_window=False, profix=str(hyper_index))
 
-# setting up the player 0
 player_0_args = "--memo={0} --server={1} " \
                 "--mod={2} --model_name={3} --hyper_index={4} " \
                 "--seed={5} --x_method={6} --mimic_model_path={7}".format(memo, game_server_id, mode,
