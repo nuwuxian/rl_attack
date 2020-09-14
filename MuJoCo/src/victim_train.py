@@ -21,7 +21,9 @@ import pdb
 model_dir = '../agent-zoo'
 rew_shape_params = {'weights': {'dense': {'reward_move': 0.1}, \
                     'sparse': {'reward_remaining': 0.01}}, 'anneal_frac': 0}
-
+## inline parameters
+## include gamma, training_iter, ent_coef, noptepoches, learning_rate, n_steps.
+## For Fair comparsion, we set the same as the ICLR 2020 paper "Adversarial Policies: Attacking Deep Reinforcement Learning"
 gamma = 0.99
 training_iter = 20000000
 ent_coef = 0.00
@@ -30,7 +32,6 @@ noptepochs = 4
 learning_rate = 3e-4
 n_steps = 2048
 checkpoint_step = 1000000
-test_episodes = 100
 
 
 callback_key = 'update'
@@ -38,7 +39,6 @@ callback_mul = 16384
 log_interval = 2048
 
 n_cpu = 8
-pretrain_template = "../agent-zoo/%s-pretrained-expert-1000-1000-1e-03.pkl"
 
 def Adv_train(env, total_timesteps, callback_key, callback_mul, logger):
     # log_callback
@@ -70,6 +70,7 @@ if __name__=="__main__":
         parser.add_argument('--exp_name', type=str, default="ppo2")
         parser.add_argument('--adv_agent_path', type=str, default='../adv_agent/model.npy')
         parser.add_argument('--adv_agent_norm_path', type=str, default='../adv_agent/obs_rms.pkl')
+        parser.add_argument('--x_method', type=str, default='grad')
 
         args = parser.parse_args()
         adv_agent_path = args.adv_agent_path
@@ -78,7 +79,7 @@ if __name__=="__main__":
         scheduler = Scheduler(annealer_dict={'lr': ConstantAnnealer(learning_rate)})
         env_name = env_list[args.env]
         # define the env_path
-        env_path = get_zoo_path(env_name, tag=2)
+        env_path = '../agent-zoo/agent/YouShallNotPass_agent.pkl'
         env = gym.make(env_name)
         venv = SubprocVecEnv([lambda: make_adv_multi2single_env(env_name, adv_agent_path, adv_agent_norm_path, False) for i in range(n_cpu)])
         venv = Monitor(venv, 0)
@@ -95,7 +96,7 @@ if __name__=="__main__":
                        learning_rate=learning_rate,  verbose=1,
                        n_steps=n_steps, gamma=gamma, tensorboard_log=out_dir,
                        model_saved_loc=out_dir, env_name=env_name, env_path=env_path, 
-                       mix_ratio=args.ratio, retrain_victim=True, norm_victim=True) # , rl_path=rl_path, var_path=var_path)
+                       mix_ratio=args.ratio, retrain_victim=True, norm_victim=True, exp_method=args.x_method) # , rl_path=rl_path, var_path=var_path)
         
         Adv_train(venv, training_iter, callback_key, callback_mul, logger)
         model.save(os.path.join(args.root_dir, env_name.split('/')[1]))

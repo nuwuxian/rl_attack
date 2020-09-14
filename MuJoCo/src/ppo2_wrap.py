@@ -34,9 +34,9 @@ class MyPPO2(ActorCriticRLModel):
     # 5: Finetune or not
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
-                 tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False], mix_ratio=1.0,
-                 model_saved_loc=None, env_name=None, env_path=None, retrain_victim=False, norm_victim=False):
+                 tensorboard_log=None, _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False, 
+                 hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False], mix_ratio=1.0, model_saved_loc=None, 
+                 env_name=None, env_path=None, retrain_victim=False, norm_victim=False, x_method='grad'):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                       _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -97,6 +97,7 @@ class MyPPO2(ActorCriticRLModel):
 
         self.retrain_victim = retrain_victim
         self.norm_victim = norm_victim
+        self.exp_method = exp_method
 
         if not self.black_box_att and self.use_explanation:
             self.agent = ZooAgent(self.env_name, self.observation_space, \
@@ -471,7 +472,7 @@ class MyPPO2(ActorCriticRLModel):
                 action_oppo_ph = actions_oppo
                 # todo calculate the attention paid on opponent
                 attention = self.calculate_attention(obs_oppo=obs_opp_ph, action_oppo=action_oppo_ph, \
-                                        exp_test=exp_test, black_box_att=self.black_box_att)
+                                        exp_test=exp_test, black_box_att=self.black_box_att, exp_method=self.exp_method)
 
                 is_stochastic = False
                 ep_info_buf.extend(ep_infos)
@@ -635,14 +636,19 @@ class MyPPO2(ActorCriticRLModel):
 
     # support black-white box
     # pass the action_oppo
-    def calculate_attention(self, obs_oppo, action_oppo=None, exp_test=None, black_box_att=True):
+    def calculate_attention(self, obs_oppo, action_oppo=None, exp_test=None, black_box_att=True, exp_method='grad'):
         if self.use_explanation:
             if black_box_att:
                assert exp_test != None
             else:
                assert self.agent != None
             if black_box_att:
-                grads = exp_test.grad(obs_oppo)
+                if exp_method == 'grad':
+                   grads = exp_test.grad(obs_oppo)
+                elif exp_method == 'integratedgrad':
+                   grads = exp_test.integratedgrad(obs_oppo)
+                elif exp_method == 'smoothgrad':
+                   grads = exp_test.smoothgrad(obs_oppo)
                 oppo_action = exp_test.output(obs_oppo)
             else:
                 grads = self.agent.grad(obs_oppo)
