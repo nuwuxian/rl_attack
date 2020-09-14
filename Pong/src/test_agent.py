@@ -32,8 +32,6 @@ mode = args.mod
 model_name = args.model_name
 hyper_index = args.hyper_index
 
-x_method = args.x_method
-
 seed = args.seed
 
 adv_model = args.adv_model
