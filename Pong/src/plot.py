@@ -20,16 +20,25 @@ def process_csv(monitor_path):
     data_score_epoch = data_score - data_score_next
 
     # data_score_epoch = data_score_epoch[data_score_epoch['total_round']!=0]
-
-    data_score_epoch['left_winning'] = data_score_epoch[['left.oppo_double_hit', 'left.oppo_miss_catch', #'left.oppo_miss_start',
+    
+    if flag:
+       data_score_epoch['left_winning'] = data_score_epoch[['left.oppo_double_hit', 'left.oppo_miss_catch', #'left.oppo_miss_start',
                                                           'left.oppo_slow_ball']].abs().sum(axis=1)
-    data_score_epoch['tie_winning'] = data_score_epoch['left.not_finish'].abs()
+       data_score_epoch['tie_winning'] = data_score_epoch['left.not_finish'].abs()
 
-    data_score_epoch['left_winning'] = data_score_epoch['left_winning'] + data_score_epoch['tie_winning']
-    data_score_epoch['total_round']  += data_score_epoch['left.not_finish'].abs()
-    wining_rate_sum = data_score_epoch['left_winning'].rolling(1000,min_periods=50).sum()
-    total_round_sum = data_score_epoch['total_round'].rolling(1000,min_periods=50).sum()
+       data_score_epoch['left_winning'] = data_score_epoch['left_winning'] + data_score_epoch['tie_winning']
+       data_score_epoch['total_round']  += data_score_epoch['left.not_finish'].abs()
+       wining_rate_sum = data_score_epoch['left_winning'].rolling(1000,min_periods=50).sum()
+       total_round_sum = data_score_epoch['total_round'].rolling(1000,min_periods=50).sum()
+    else:
+       data_score_epoch['right_winning'] = data_score_epoch[['right.oppo_double_hit', 'right.oppo_miss_catch', #'left.oppo_miss_start',
+                                                          'right.oppo_slow_ball']].abs().sum(axis=1)
+       data_score_epoch['tie_winning'] = data_score_epoch['left.not_finish'].abs()
 
+       data_score_epoch['right_winning'] = data_score_epoch['right_winning'] + data_score_epoch['tie_winning']
+       data_score_epoch['total_round']  += data_score_epoch['left.not_finish'].abs()
+       wining_rate_sum = data_score_epoch['right_winning'].rolling(1000,min_periods=50).sum()
+       total_round_sum = data_score_epoch['total_round'].rolling(1000,min_periods=50).sum()
     wining_rate = wining_rate_sum / total_round_sum
     result = pd.concat([wining_rate], names=['winning_rate'], axis=1)
     return result
@@ -53,7 +62,7 @@ colors = ["red",'blue',"g", 'y']
 
 # base_folder: the path to the logs of the trained agents for plotting.
 base_folder = "../results/adv_train"
-
+flag = True
 file_folders = []
 
 for file_folder in os.listdir(base_folder):
@@ -76,7 +85,7 @@ for file_folder in file_folders:
             if csv_file.endswith(".csv"):
                 monitor_path_csv_file = os.path.join(monitor_path,csv_file)
                 try:
-                    one_result = process_csv(monitor_path_csv_file)
+                    one_result = process_csv(monitor_path_csv_file, flag)
                     one_method_result.append(one_result)
                 except KeyError:
                     print("Key Error in {}, please check the header of the file".format(monitor_path))
