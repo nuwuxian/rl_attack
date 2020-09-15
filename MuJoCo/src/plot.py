@@ -144,7 +144,6 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
 # main function
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_seed", type=int, default=6)
     parser.add_argument('--log_dir', type=str, default="../results/adv_train")
     parser.add_argument("--out_dir", type=str, default="../results/adv_train")
     parser.add_argument("--filename", type=str, default='out.png')
