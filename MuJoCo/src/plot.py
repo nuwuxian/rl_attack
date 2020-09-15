@@ -90,7 +90,7 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
             else:
                 events = load_tb_data(os.path.join(log_dir, method), keys=['game_win1'])
                 subset = data_frame(events, game=game)
-                group = subset.groupby('index')['game_win1']
+                group = subset.groupby('step')['game_win1']
         min_n, mean, max_n = group.min()[0:length+1], group.mean()[0:length+1], group.max()[0:length+1]
         print('%s: min: %.4f, mean: %.4f, max: %.4f.' % (method, max(min_n), max(mean), max(max_n)))
         std.append(group.std()[0:length+1])
@@ -116,7 +116,8 @@ if __name__ == "__main__":
     parser.add_argument("--out_dir", type=str, default="../results/adv_train")
     parser.add_argument("--filename", type=str, default='out.png')
     args = parser.parse_args()
-    reverse = False
+    #reverse = False
+    reverse = True
 
     game = 'YouShallNotPass'
 
