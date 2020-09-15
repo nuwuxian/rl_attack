@@ -51,10 +51,9 @@ colors = ["red",'blue',"g", 'y']
 
 
 
-# inline comment
-# folder for saving results
-# put your trained folder here.
+# base_folder: the path to the logs of the trained agents for plotting.
 base_folder = "../results/adv_train"
+
 file_folders = []
 
 for file_folder in os.listdir(base_folder):
