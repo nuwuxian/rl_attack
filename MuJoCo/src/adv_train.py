@@ -25,7 +25,7 @@ rew_shape_params = {'weights': {'dense': {'reward_move': 0.1}, \
 
 ## inline parameters
 ## include gamma, training_iter, ent_coef, noptepoches, learning_rate, n_steps.
-## For Fair comparsion, we set the same as the ICLR 2020 paper "Adversarial Policies: Attacking Deep Reinforcement Learning"
+## For Fair comparsion, we set these parameters the same as the ICLR 2020 paper "Adversarial Policies: Attacking Deep Reinforcement Learning"
 
 #  param gamma: (float) Discount factor
 #  param traning_iter: (int) Training iterations.
