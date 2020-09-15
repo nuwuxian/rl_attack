@@ -12,7 +12,7 @@ from stable_baselines.common.policies import MlpPolicy,MlpLstmPolicy
 from stable_baselines import PPO1, PPO2
 from pposgd_wrap import PPO1_model_value
 
-from policies import MlpPolicy_act
+from policies import MlpPolicy_hua
 
 from stable_baselines.common.vec_env import DummyVecEnv,SubprocVecEnv, VecVideoRecorder
 from stable_baselines.results_plotter import load_results, ts2xy
@@ -110,7 +110,7 @@ def advlearn(env, model_name=None, dir_dict=None):
         ## param timesteps_per_actorbatch: timesteps per actor per update
         ## param entcoeff: Entropy coefficient for the loss calculation
         ## other inline hyperparameters is by default choice in file 'PPO1_model_value'
-        model = PPO1_model_value(MlpPolicy_act, env, timesteps_per_actorbatch=1000, entcoeff = 0, verbose=1,
+        model = PPO1_model_value(MlpPolicy_hua, env, timesteps_per_actorbatch=1000, entcoeff = 0, verbose=1,
                          tensorboard_log=dir_dict['tb'], hyper_weights=dir_dict['_hyper_weights'],
                          benigned_model_file=None, full_tensorboard_log=False,
                          black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
