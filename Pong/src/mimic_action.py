@@ -85,37 +85,8 @@ if __name__ == "__main__":
         return state, action
 
     #  the filename
-    filename = '../saved/black_data.pkl'
+    filename = '../saved/trajectory.pkl'
     data_X_true, data_Y_true = load_data(filename)
-    '''
-    from sklearn.model_selection import KFold
-    def load_data(filename):
-        import pickle as pkl
-
-        def pickleLoader(pklFile):
-            try:
-                while True:
-                    yield pkl.load(pklFile)
-            except EOFError:
-                pass
-
-
-        total_data_X = []
-        total_data_Y = []
-        total_data_X_true = []
-        total_data_Y_true = []
-        with open(filename, "rb") as f:
-            for event in pickleLoader(f):
-                total_data_X.append(event[0])
-                total_data_Y.append(event[1])
-                total_data_X_true.append(event[2])
-                total_data_Y_true.append(event[3])
-        return np.vstack(total_data_X), np.vstack(total_data_Y), \
-               np.vstack(total_data_X_true), np.vstack(total_data_Y_true)
-
-    data_X, _, data_X_true, data_Y_true = load_data("../results/against_master_stepwise/black-box-attack_/"
-                                                    "ppo1_pong-07172019-173036/model/test-debug-black-box.data")
-    '''
 
     from sklearn.model_selection import KFold
 
@@ -133,8 +104,8 @@ if __name__ == "__main__":
 
     print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
-    best_index = np.argmax(cvscores)
+    best_index = np.argmin(cvscores)
     model = model_candidates[best_index]
-    model.save("./saved/mimic_model.h5")
+    model.save("../saved/mimic_model.h5")
 
 
