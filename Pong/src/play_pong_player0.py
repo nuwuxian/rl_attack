@@ -157,7 +157,7 @@ def test(server_id, model_name="ppo1", dir_dict=None):
 
     model_name = "{0}agent{1}.pkl".format(dir_dict['model'], dir_dict['_player_index'])
 
-    model = PPO1_hua_model_value.load(model_name, env=env, timesteps_per_actorbatch=3000, tensorboard_log=dir_dict['tb'])
+    model = PPO1_model_value.load(model_name, env=env, timesteps_per_actorbatch=3000, tensorboard_log=dir_dict['tb'])
     # load the pretrained_model 
     play(env, model)
 
