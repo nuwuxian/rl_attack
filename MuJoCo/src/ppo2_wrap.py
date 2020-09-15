@@ -25,7 +25,7 @@ from pretrain_model import RL_func, RL_model
 from agent import ZooAgent
 from common import get_zoo_path
 import pdb
-
+import pickle as pkl
 
 class MyPPO2(ActorCriticRLModel):
     # Hyper_setting
@@ -95,7 +95,7 @@ class MyPPO2(ActorCriticRLModel):
 
         # reset the hyper_setting (baseline method)
         if self.save_victim_traj:
-            hyper_settings = [0, -0, 0, 0, 0, 0, False, False, False]
+            hyper_settings = [0, -0, 0, 0, 0, 0, True, True, False]
             os.makedirs('../saved/', exist_ok=True)
 
         self.hyper_weights = hyper_settings[:6]
@@ -483,7 +483,7 @@ class MyPPO2(ActorCriticRLModel):
 
                 obs_opp_ph = obs_oppo
                 action_oppo_ph = actions_oppo
-                if update % 10 == 0 and self.save_victim_traj:
+                if update % 100 == 0 and self.save_victim_traj:
                     obs_list.append(obs_oppo)
                     act_list.append(actions_oppo)
 
