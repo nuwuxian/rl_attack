@@ -36,7 +36,8 @@ class MyPPO2(ActorCriticRLModel):
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False, 
                  hyper_settings=[0, -0.06, 0, 1, 0, 1, True, True, False], mix_ratio=1.0, model_saved_loc=None, 
-                 env_name=None, env_path=None, mimic_model_path=None, retrain_victim=False, norm_victim=False, exp_method='grad'):
+                 env_name=None, env_path=None, mimic_model_path=None, retrain_victim=False, norm_victim=False, 
+                 save_victim_traj=False, exp_method='grad'):
 
         super(MyPPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                       _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -86,9 +87,16 @@ class MyPPO2(ActorCriticRLModel):
         self.env_path = env_path
 
         self.mimic_model_path = mimic_model_path
+        self.save_victim_traj = save_victim_traj
 
         self._train_mimic = None
         self.model_saved_loc = model_saved_loc
+
+
+        # reset the hyper_setting (baseline method)
+        if self.save_victim_traj:
+            hyper_settings = [0, -0, 0, 0, 0, 0, False, False, False]
+            os.makedirs('../saved/', exist_ok=True)
 
         self.hyper_weights = hyper_settings[:6]
         self.black_box_att = hyper_settings[6]
@@ -459,6 +467,9 @@ class MyPPO2(ActorCriticRLModel):
                 exp_test = None
             nupdates = total_timesteps // self.n_batch
 
+            obs_list = []
+            act_list = []
+
             for update in range(1, nupdates + 1):
                 assert self.n_batch % self.nminibatches == 0
                 batch_size = self.n_batch // self.nminibatches
@@ -472,6 +483,11 @@ class MyPPO2(ActorCriticRLModel):
 
                 obs_opp_ph = obs_oppo
                 action_oppo_ph = actions_oppo
+                if update % 10 == 0 and self.save_victim_traj:
+                    obs_list.append(obs_oppo)
+                    act_list.append(actions_oppo)
+
+
                 # todo calculate the attention paid on opponent
                 attention = self.calculate_attention(obs_oppo=obs_opp_ph, action_oppo=action_oppo_ph, \
                                         exp_test=exp_test, black_box_att=self.black_box_att, exp_method=self.exp_method)
@@ -558,6 +574,13 @@ class MyPPO2(ActorCriticRLModel):
                     if update % 1000 == 0:
                         print("Model saved at: {}".format(model_file_name))
                         self.save(model_file_name)
+
+
+            obs_numpy = np.vstack(obs_list)
+            act_numpy = np.vstack(act_list)
+
+            with open('../saved/trajectory.pkl', 'ab+') as f:
+                pkl.dump([obs_numpy, act_numpy], f, protocol=2)
 
             return self
 

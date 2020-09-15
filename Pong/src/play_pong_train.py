@@ -21,6 +21,7 @@ def parse_args():
     # seed value
     parser.add_argument("--x_method", type=str, default="grad")
     parser.add_argument("--mimic_model_path", type=str, default="../pretrain/saved/mimic_model.h5")
+    parser.add_argument("--save_victim_traj", type=bool, default=False)
     parser.add_argument("--seed", type=int, default=0)
 
     return parser.parse_args()
@@ -35,6 +36,7 @@ hyper_index = args.hyper_index
 seed = args.seed
 x_method = args.x_method
 mimic_model_path = args.mimic_model_path
+save_victim_traj = args.save_victim_traj
 
 # create the gameserver, the same as enviroment
 game_server_id = args.server+"{0}".format(hyper_index)
@@ -43,8 +45,8 @@ gameserver = multiplayer.SharedMemoryServer(game, game_server_id, want_test_wind
 
 player_0_args = "--memo={0} --server={1} " \
                 "--mod={2} --model_name={3} --hyper_index={4} " \
-                "--seed={5} --x_method={6} --mimic_model_path={7}".format(memo, game_server_id, mode,
-                model_name, hyper_index, seed, x_method, mimic_model_path)
+                "--seed={5} --x_method={6} --mimic_model_path={7} --save_victim_traj={8}".format(memo, game_server_id, mode,
+                model_name, hyper_index, seed, x_method, mimic_model_path, save_victim_traj)
 
 player_0_args = player_0_args.split(" ")
 

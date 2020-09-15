@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--x_method", type=str, default='grad')
     parser.add_argument("--mimic_model_path", type=str, default='../pretrain/saved/mimic_model.h5')
+    parser.add_argument("--save_victim_traj", type=bool, default=False)
 
     return parser.parse_args()
 
@@ -112,7 +113,8 @@ def advlearn(env, model_name=None, dir_dict=None):
                          benigned_model_file=None, full_tensorboard_log=False,
                          black_box_att=dir_dict['_black_box'], attention_weights=dir_dict['_attention'],
                          model_saved_loc=dir_dict['model'], clipped_attention=dir_dict['_clipped_attention'], 
-                         exp_method=dir_dict['_x_method'], mimic_model_path=dir_dict['_mimic_model_path'])
+                         exp_method=dir_dict['_x_method'], mimic_model_path=dir_dict['_mimic_model_path'],
+                         save_victim_traj=dir_dict['_save_victim_traj'])
     else:
         model = PPO1(MlpPolicy, env, timesteps_per_actorbatch=1000, verbose=1,
                      tensorboard_log=dir_dict['tb'])
@@ -187,7 +189,8 @@ dir_dict= {
     "_clipped_attention": hyper_weights[-1],
     "_seed": args.seed,
     "_x_method": args.x_method,
-    "_mimic_model_path": args.mimic_model_path
+    "_mimic_model_path": args.mimic_model_path,
+    "_save_victim_traj": args.save_victim_traj
 }
 
 SAVE_DIR = './agent_zoo/'+ "Pong"

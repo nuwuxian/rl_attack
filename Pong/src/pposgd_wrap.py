@@ -34,7 +34,7 @@ class PPO1_model_value(ActorCriticRLModel):
                  schedule='linear', verbose=0, tensorboard_log=None,
                  _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False, hyper_weights=[0.,0.,0.,0.,0.,0.],
                  benigned_model_file=None, black_box_att=False, attention_weights=False, model_saved_loc=None,
-                 clipped_attention=False, exp_method='grad', mimic_model_path=None):
+                 clipped_attention=False, exp_method='grad', mimic_model_path=None, save_victim_traj=False):
 
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs)
@@ -84,6 +84,13 @@ class PPO1_model_value(ActorCriticRLModel):
 
         self.benigned_model_file = benigned_model_file
         self.mimic_model_path = mimic_model_path
+
+        self.save_victim_traj = save_victim_traj
+
+        ## whether save or not
+        if self.save_victim_traj:
+            self.hyper_weights = [0.,0.,0.,0.,0.,0.]
+
 
         if self.benigned_model_file is not None: # attacking an self_trained model
             self.benigned_model_file_meta_file = self.tensorboard_log+'oppopi'
@@ -498,6 +505,10 @@ class PPO1_model_value(ActorCriticRLModel):
                     obs_opp_ph = self.infer_obs_opp_ph(obs_ph)
                     action_oppo_ph, state_value_opp_ph \
                         = self.output_act_statev_for_adv(obs_opp_ph, file_name=self.benigned_model_file)
+                    
+                    if self.save_victim_traj:
+                        obs_list.append(obs_opp_ph)
+                        act_list.append(action_oppo_ph)
 
                     # todo modify obs_ph to obs_mask_ph
                     obs_mask_ph = self.infer_obs_mask_ph(obs_ph)
@@ -719,12 +730,13 @@ class PPO1_model_value(ActorCriticRLModel):
                             model_file_name = "{0}agent_{1}.pkl".format(self.model_saved_loc, iters_so_far)
                             print("Model saved at: {}".format(model_file_name))
                             self.save(model_file_name)
-                '''
-                obs_numpy = np.vstack(obs_list)
-                act_numpy = np.vstack(act_list)
-                with open('./saved/black_data.pkl', 'ab+') as f:
-                    pkl.dump([obs_numpy, act_numpy], f, protocol=2)
-                '''
+                
+                if self.save_victim_traj:
+                    obs_numpy = np.vstack(obs_list)
+                    act_numpy = np.vstack(act_list)
+                    with open('./saved/black_data.pkl', 'ab+') as f:
+                         pkl.dump([obs_numpy, act_numpy], f, protocol=2)
+                
         return self
 
     def predict_debug(self, obs, obs_prev, act_prev):
