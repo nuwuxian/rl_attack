@@ -642,7 +642,7 @@ class CnnLnLstmPolicy(LstmPolicy):
                                               layer_norm=True, feature_extraction="cnn", **_kwargs)
 
 
-class MlpPolicy_hua(FeedForwardPolicy):
+class MlpPolicy_act(FeedForwardPolicy):
     """
     Policy object that implements actor critic, using a MLP (2 layers of 64)
 
@@ -657,7 +657,7 @@ class MlpPolicy_hua(FeedForwardPolicy):
     """
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **_kwargs):
-        super(MlpPolicy_hua, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
+        super(MlpPolicy_act, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
                                         feature_extraction="mlp", **_kwargs)
 
 
