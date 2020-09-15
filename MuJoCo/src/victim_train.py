@@ -72,7 +72,7 @@ def Adv_train(env, total_timesteps, callback_key, callback_mul, logger):
 if __name__=="__main__":
 
         parser = argparse.ArgumentParser()
-        parser.add_argument("env", type=int, default=2)
+        parser.add_argument("--env", type=int, default=2)
         parser.add_argument("--seed", type=int, default=0)
         parser.add_argument("--ratio", type=int, default=0)
         parser.add_argument('--root_dir', type=str, default="../agent-zoo")

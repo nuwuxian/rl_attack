@@ -108,11 +108,12 @@ class RL_model(object):
         return 0
 
 if __name__ == "__main__":
-    out_filename = '/home/xkw5132/Adv_RL/src/modelfree/policies/saved/policy_data.pkl'
+    out_filename = '../saved/trajectory.pkl'
+
     with open(out_filename, 'rb') as f:
         [opp_obs, opp_acts] = pkl.load(f)
-    data_X_true = np.vstack(opp_obs)
-    data_Y_true = np.vstack(opp_acts)
+    data_X_true = opp_obs
+    data_Y_true = opp_acts
 
     from sklearn.model_selection import KFold
     model_candidates = []
@@ -128,12 +129,23 @@ if __name__ == "__main__":
         print("%s: %.2f%%" % (model.model.metrics_names[1], scores[1] * 100))
         cvscores.append(1.0 * scores[1])
         model_candidates.append(model)
-        out_file = './saved/mimic_model_' + str(cnt) + '.h5'
-        model.save(out_file)
         cnt += 1
     print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
     best_index = np.argmin(cvscores)
     model = model_candidates[best_index]
 
     print('best index is ', best_index)
-    model.save("./saved/mimic_model.h5")
+    model.save("../saved/mimic_model.h5")
+    weights = model.model.get_weights()
+    # save into pkl
+    flat_param = []
+    for param in weights:
+        flat_param.append(param.reshape(-1))
+    flat_param = np.concatenate(flat_param, axis=0)
+
+    with open('../saved/mimic_model.pkl', 'ab+') as f:
+        pkl.dump(flat_param, f, protocol=2)
+
+
+
+
