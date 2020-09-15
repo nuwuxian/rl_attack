@@ -60,8 +60,7 @@ for file_folder in os.listdir(base_folder):
 
 file_folders.sort()
 
-# file_folders = ["att_weight_1", "att_weight_10"]
-
+std = []
 for file_folder in file_folders:
 #    if file_folder.endswith("videos") or file_folder.endswith("2034") or file_folder.endswith("003045"):
 #        continue
@@ -82,7 +81,7 @@ for file_folder in file_folders:
         one_method_result = one_method_result.iloc[:4000]
         one_method_result["mean"] = one_method_result.mean(axis=1)
         one_method_result["std"] = one_method_result.std(axis=1)
-
+        std.append(one_method_result["std"])
         tmp = one_method_result['mean'] + one_method_result['std']
 
         print('---------------max value is ', max(tmp.dropna(axis=0, how='all')))
@@ -109,4 +108,16 @@ ax.set_xlim(0,4000)
 
 fig = ax.get_figure()
 fig.savefig("{}/monitor.pdf".format(base_folder))
+plt.close()
+
+
+fig = plt.figure(figsize=(10,8))
+ax = fig.add_subplot(111)
+
+for i in range(1):
+    std[i].plot(ax=ax, color=colors[i], linewidth=3)
+ax.set_xticks([0, 1000, 2000, 3000, 4000])
+ax.set_yticks([0, 0.1, 0.2])
+plt.grid(True)
+fig.savefig(base_folder + '/'+ 'std.png')
 plt.close()

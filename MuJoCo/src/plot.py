@@ -137,8 +137,7 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
     fig, ax = plt.subplots(figsize=(10, 8))
     for i in range(1):
         std[i].plot(ax=ax, color=colors[i], linewidth=3)
-    #ax.set_xticks([0, 0.5e+7, 1e+7, 1.5e+7, 2e+7, 2.5e+7, 3e+7, 3.5e+7])
-    ax.set_xticks([0, 0.5e+7, 1e+7])
+    ax.set_xticks([0, 0.5e+7, 1e+7, 1.5e+7, 2e+7])
     plt.grid(True)
     fig.savefig(out_dir + '/' + filename.split('.')[0]+'_std.png')
 
