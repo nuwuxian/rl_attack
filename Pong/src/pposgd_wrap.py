@@ -90,6 +90,7 @@ class PPO1_model_value(ActorCriticRLModel):
         ## whether save or not
         if self.save_victim_traj:
             self.hyper_weights = [0.,0.,0.,0.,0.,0.]
+            os.makedirs('../saved/', exist_ok=True)
 
 
         if self.benigned_model_file is not None: # attacking an self_trained model
@@ -506,7 +507,7 @@ class PPO1_model_value(ActorCriticRLModel):
                     action_oppo_ph, state_value_opp_ph \
                         = self.output_act_statev_for_adv(obs_opp_ph, file_name=self.benigned_model_file)
                     
-                    if self.save_victim_traj:
+                    if self.save_victim_traj and len(obs_list) <= 50:
                         obs_list.append(obs_opp_ph)
                         act_list.append(action_oppo_ph)
 
@@ -734,7 +735,7 @@ class PPO1_model_value(ActorCriticRLModel):
                 if self.save_victim_traj:
                     obs_numpy = np.vstack(obs_list)
                     act_numpy = np.vstack(act_list)
-                    with open('./saved/black_data.pkl', 'ab+') as f:
+                    with open('../saved/trajectory.pkl', 'ab+') as f:
                          pkl.dump([obs_numpy, act_numpy], f, protocol=2)
                 
         return self
@@ -1001,7 +1002,7 @@ class PPO1_model_value(ActorCriticRLModel):
         return obs_oppo_predict, obs_oppo_predict_noise
 
     # define the new attention
-    def calculate_new_attention(self, obs_oppo, cur_lamda, exp_test=None, exp_method='grad'):
+    def calculate_new_attention(self, obs_oppo, cur_lamda, exp_test=None, exp_method='integratedgrad'):
         if self.use_explaination:
             assert exp_test != None
             if exp_method == 'grad':
