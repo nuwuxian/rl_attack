@@ -74,7 +74,6 @@ if __name__=="__main__":
         parser = argparse.ArgumentParser()
         parser.add_argument("env", type=int, default=2)
         parser.add_argument("--seed", type=int, default=0)
-        parser.add_argument("--load", type=int, default=0)
         parser.add_argument("--ratio", type=int, default=0)
         parser.add_argument('--root_dir', type=str, default="../agent-zoo")
         parser.add_argument('--exp_name', type=str, default="ppo2")
