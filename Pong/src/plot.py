@@ -48,8 +48,12 @@ lines = []
 lines_names = []
 
 colors = ["red",'blue',"g", 'y']
-#colors = ["red","g"]
 
+
+
+# inline comment
+# folder for saving results
+# put your trained folder here.
 base_folder = "../results/adv_train"
 file_folders = []
 
