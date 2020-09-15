@@ -91,38 +91,6 @@ def plot_data(log_dir, out_dir, filename, game, length=350, reverse=False):
                 events = load_tb_data(os.path.join(log_dir, method), keys=['game_win1'])
                 subset = data_frame(events, game=game)
                 group = subset.groupby('index')['game_win1']
-        else:
-            if reverse:
-                events = load_tb_data(os.path.join(log_dir, method), keys=['game_win1'])
-                subset = data_frame(events, game=game)
-                subset['game_win0'] = 1.0 - subset['game_win1']
-                group = subset.groupby('index')['game_win0']
-
-                events_adv = load_tb_data(os.path.join(log_dir, method), keys=['game_adv_win1'])
-                subset_adv = data_frame(events_adv, game=game)
-                subset_adv['game_adv_win0'] = 1.0 - subset_adv['game_adv_win1']
-                group_adv = subset_adv.groupby('index')['game_adv_win0']
-
-                events_norm = load_tb_data(os.path.join(log_dir, method), keys=['game_norm_win1'])
-                subset_norm = data_frame(events_norm, game=game)
-                subset_norm['game_norm_win0'] = 1.0 - subset_norm['game_norm_win1']
-                group_norm = subset_norm.groupby('index')['game_norm_win0']
-
-            else:
-                events_adv = load_tb_data(os.path.join(log_dir, method), keys=['game_adv_win0'])
-                subset_adv = data_frame(events_adv, game=game)
-                group_adv = subset_adv.groupby('index')['game_adv_win0']
-
-                events_norm = load_tb_data(os.path.join(log_dir, method), keys=['game_norm_win0'])
-                subset_norm = data_frame(events_norm, game=game)
-                group_norm = subset_norm.groupby('index')['game_norm_win0']
-
-                events = load_tb_data(os.path.join(log_dir, method), keys=['game_win0'])
-                subset = data_frame(events, game=game)
-                group = subset.groupby('index')['game_win0']
-
-
-
         min_n, mean, max_n = group.min()[0:length+1], group.mean()[0:length+1], group.max()[0:length+1]
         print('%s: min: %.4f, mean: %.4f, max: %.4f.' % (method, max(min_n), max(mean), max(max_n)))
         std.append(group.std()[0:length+1])
@@ -151,9 +119,6 @@ if __name__ == "__main__":
     reverse = False
 
     game = 'YouShallNotPass'
-    #game = 'KickAndDefend'
-    #game = 'SumoHumans'
-    #game = 'SumoAnts'
 
     out_dir = args.out_dir
     log_dir = args.log_dir
