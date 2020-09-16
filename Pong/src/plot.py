@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 
-def process_csv(monitor_path):
+def process_csv(monitor_path, flag):
     print(monitor_path)
     data = pd.read_csv("{}".format(monitor_path), skiprows=[0], header=0)
     # data = data.get_chunk()
