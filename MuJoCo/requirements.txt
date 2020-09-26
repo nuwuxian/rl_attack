@@ -1,4 +1,4 @@
-tensorflow==1.14.0
+tensorflow==1.15.4
 numpy>=1.15
 git+git://github.com/HumanCompatibleAI/baselines.git@f70377#egg=baselines
 git+git://github.com/HumanCompatibleAI/baselines.git@906d83#egg=stable-baselines
