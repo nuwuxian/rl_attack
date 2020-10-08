@@ -16,9 +16,24 @@ The repo consists the following two parts:
 
 This codebase uses Python 3.6.  
 
-For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first. After that install all other dependencies by running `pip install -r MuJoCo/requirements.txt`.  
+For Mujoco-Game, you need to install MuJoCo (version 1.3.1) first.
+Install conda3 on your machine (https://www.anaconda.com/products/individual);
+Run “conda create -n mujoco python=3.6” to create a virtual environment;
+Run “conda activate mujoco” to activate this environment;
+Run “pip install -U scikit-learn” to install scikit learn;
+Run “pip install tensorflow==1.14” to install the tensorflow;
+Run “sudo apt-get update && sudo apt-get install cmake libopenmpi-dev zlib1g-dev” to install the openmpi;
+Put “installation/mujoco-requirements.txt”  in your working directory and run “pip install -r mujoco-requirements.txt” to install all the other requirements;
 
-For Pong-Game, you need to install install OpenAI/Roboschool first. After that install all other dependencies by running `pip install -r Pong/requirements.txt`.  
+For Pong-Game, you need to install install OpenAI/Roboschool first.
+
+Run “conda create -n pong python=3.6” to create a virtual environment;
+Run “conda activate pong” to activate this environment;
+Run “sudo apt-get update && sudo apt-get install cmake libopenmpi-dev zlib1g-dev” to install the openmpi;
+Run “pip install -U scikit-learn” to install scikit learn;
+Run “pip install roboschool==1.0.48” to install the roboschool environment;
+Put “installation/pong-requirements.txt”  into your working directory and run “pip install -r pong-requirements.txt” to install all the other requirements;
+After installing, run “cd ~/anaconda3/envs/pong/lib/python3.6/site-packages/roboschool” and copy the “gym_pong.py”, “multiplayer.py” and “monitor.py” files from our provided AWS pong environment to the current folder "roboschool".
 
 ## Adversarial Trainining and Retraining in MuJoCo-Game
 You can find the victim agent in `MuJoCo/multiagent-competition/agent-zoo` folder. `MuJoCo/agent-zoo/agent` folder contains the surrogate model of victim agent which is used for black-box adversarial training. `MuJoCo/adv_agent` folder contains the adversarial agent trained by our method which is used for adversarial retraining. 
