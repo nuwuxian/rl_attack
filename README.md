@@ -12,8 +12,7 @@ The repo consists the following two parts:
   - Adversarial attack and defense in MuJoCo-Game.  
   - Adversarial attack and defense in Pong-Game.  
 
-We recommend not to run the experiments on Proxmox/KVM, it might cause issues. For the game environments install, please refer the INSTALLATION.md.
-For the running instructions, please refer to the RUNNING.md.  
+We recommend not to run the experiments on local virtual machines like Proxmox/KVM. It might cause issues. For the game environment installation, please refer to the INSTALLATION.md. For the running instructions, please refer to the RUNNING.md.  
 
 we list the performance of our machine (mainly CPU and memory) and the time needed for running each step on each machine.
 
