@@ -24,4 +24,5 @@ Tested system: Ubuntu 16.04 LTS, CentOS 7.8.2003, CentOS 7.5.1804.
   - Run ```pip install -U scikit-learn``` to install scikit learn;  
   - Run ```pip install roboschool==1.0.48``` to install the roboschool environment;  
   - Run ```pip install -r Pong/requirements.txt``` to install all the other requirements;  
+  - Run ```pip install h5py==2.10```;  
   - After installing, run ```cd ~/anaconda3/envs/pong/lib/python3.6/site-packages/roboschool``` and copy the ```gym_pong.py```, ```multiplayer.py``` and ```monitor.py``` files in the following folder ```https://drive.google.com/drive/folders/1A1U83hnu7S6kdVl6Q16ZW-hbNouigZF8?usp=sharing ```to the current folder ```roboschool```. 
