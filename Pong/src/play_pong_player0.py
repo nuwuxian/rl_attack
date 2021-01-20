@@ -26,7 +26,6 @@ import multiprocessing
 import pandas as pd
 
 global player_n
-# define the play_n = 1
 player_n = 0
 
 from datetime import datetime
