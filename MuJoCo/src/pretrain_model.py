@@ -131,7 +131,7 @@ if __name__ == "__main__":
         model_candidates.append(model)
         cnt += 1
     print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
-    best_index = np.argmin(cvscores)
+    best_index = np.argmax(cvscores)
     model = model_candidates[best_index]
 
     print('best index is ', best_index)
