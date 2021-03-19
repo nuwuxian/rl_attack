@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
-    best_index = np.argmin(cvscores)
+    best_index = np.argmax(cvscores)
     model = model_candidates[best_index]
     model.save("../saved/mimic_model.h5")
 
