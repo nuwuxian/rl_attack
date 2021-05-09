@@ -243,6 +243,7 @@ class MlpPolicyValue(Policy):
                 obz = tf.clip_by_value((self.observation_ph - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
 
             last_out = obz
+            
             for i, hid_size in enumerate(hiddens):
                 last_out = tf.nn.tanh(dense(last_out, hid_size, "vffc%i" % (i + 1)))
 
@@ -254,9 +255,17 @@ class MlpPolicyValue(Policy):
             if self.normalized and self.normalized != 'ob':
                 self.vpred = self.vpredz * self.ret_rms.std + self.ret_rms.mean
             last_out = obz
+
+
+            # ff activation policy
+            ff_out = []
             for i, hid_size in enumerate(hiddens):
                 last_out = tf.nn.tanh(dense(last_out, hid_size, "polfc%i" % (i + 1)))
+                ff_out.append(last_out)
                 last_out = tf.nn.dropout(last_out, rate=rate)
+
+            self.policy_ff_acts = tf.concat(ff_out, axis=-1)
+
             mean = dense(last_out, ac_space.shape[0], "polfinal")
             logstd = tf.get_variable(name="logstd", shape=[n_batch_train, ac_space.shape[0]],
                                      initializer=tf.zeros_initializer())
@@ -266,8 +275,6 @@ class MlpPolicyValue(Policy):
             self.sampled_action = switch(self.stochastic_ph, self.pd.sample(), self.pd.mode())
             self.neglogp = self.proba_distribution.neglogp(self.sampled_action)
             self.policy_proba = [self.proba_distribution.mean, self.proba_distribution.std]
-            # self.grad
-            self.grad = tf.gradients(self.sampled_action, self.observation_ph)
             # add deterministic action
             self.deterministic_action = self.pd.mode()
 
@@ -278,12 +285,19 @@ class MlpPolicyValue(Policy):
             self.taken_action_ph: taken_action
         }
 
-    def act(self, observation, stochastic=True):
+    def act(self, observation, stochastic=True, extra_op=None):
         outputs = [self.sampled_action, self.vpred]
-        a, v = tf.get_default_session().run(outputs, {
-            self.observation_ph: observation[None],
-            self.stochastic_ph: stochastic})
-        return a[0], {'vpred': v[0]}
+        if extra_op == None:
+            a, v = tf.get_default_session().run(outputs, {
+                self.observation_ph: observation[None],
+                self.stochastic_ph: stochastic})
+            return a[0], {'vpred': v[0]}
+        else:
+            outputs.append(self.policy_ff_acts)
+            a, v, ex = tf.get_default_session().run(outputs, {
+                self.observation_ph: observation[None],
+                self.stochastic_ph: stochastic})
+            return a[0], {'vpred': v[0]}, ex[0, ]
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
@@ -311,22 +325,6 @@ class MlpPolicyValue(Policy):
         else:
             return self.sess.run(self.policy_proba, {self.obs_ph: obs})
 
-    def get_gradient(self, observation, stochastic=True, normalize=True):
-        outputs = [self.grad]
-        dim = len(observation.shape)
-
-        g = tf.get_default_session().run(outputs, {
-            self.observation_ph: observation[None] if dim == 1 else observation,
-            self.stochastic_ph: stochastic})
-        # normalize the gradient
-        sal_x = g[0][0]
-        if normalize:
-            sal_x = np.abs(g[0][0])
-            sal_x_max = np.max(sal_x, axis=1)
-            sal_x_max[sal_x_max == 0] = 1e-16
-            sal_x = sal_x / sal_x_max[:, None]
-        return sal_x
-
     def value(self, obs, state=None, mask=None):
         if self.sess==None:
             return tf.get_default_session().run(self.value_flat, {self.obs_ph: obs})
@@ -335,7 +333,7 @@ class MlpPolicyValue(Policy):
 
 
 class LSTMPolicy(Policy):
-    def __init__(self, scope, *, ob_space, ac_space, hiddens, n_batch_train=1,
+    def __init__(self, scope, *, ob_space, ac_space, hiddens, rate=0.0, n_batch_train=1,
                  n_envs=1, sess=None, reuse=False, normalize=False):
         self.sess = sess
         self.recurrent = True
@@ -361,8 +359,10 @@ class LSTMPolicy(Policy):
                 obz = tf.clip_by_value((self.observation_ph - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
 
             last_out = obz
+
             for hidden in hiddens[:-1]:
                 last_out = tf.contrib.layers.fully_connected(last_out, hidden)
+
             self.zero_state = []
             self.state_in_ph = []
             self.state_out = []
@@ -385,6 +385,8 @@ class LSTMPolicy(Policy):
             last_out = obz
             for hidden in hiddens[:-1]:
                 last_out = tf.contrib.layers.fully_connected(last_out, hidden)
+                self.policy_ff_acts = last_out
+                last_out = tf.nn.dropout(last_out, rate=rate) 
             cell = tf.contrib.rnn.BasicLSTMCell(hiddens[-1], reuse=reuse)
             size = cell.state_size
             self.zero_state.append(np.zeros(size.c, dtype=np.float32))
@@ -412,6 +414,8 @@ class LSTMPolicy(Policy):
             self.zero_state = np.array(self.zero_state)
             self.state_in_ph = tuple(self.state_in_ph)
             self.state = self.zero_state
+            # add deterministic action
+            self.deterministic_action = self.pd.mode()
 
             for p in self.get_trainable_variables():
                 tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.reduce_sum(tf.square(p)))
@@ -423,15 +427,25 @@ class LSTMPolicy(Policy):
             self.taken_action_ph: taken_action
         }
 
-    def act(self, observation, stochastic=True):
+    def act(self, observation, stochastic=True, extra_op=None):
         outputs = [self.sampled_action, self.vpred, self.state_out]
         # design for the pre_state
         # notice the zero state
-        a, v, s = tf.get_default_session().run(outputs, {
-            self.observation_ph: observation[None, None],
-            self.state_in_ph: list(self.state[:, None, :]),
-            self.stochastic_ph: stochastic,
-            self.dones_ph:np.zeros(self.state[0, None, 0].shape)[:,None]})
+        if extra_op == None:
+            a, v, s = tf.get_default_session().run(outputs, {
+                self.observation_ph: observation[None, None],
+                self.state_in_ph: list(self.state[:, None, :]),
+                self.stochastic_ph: stochastic,
+                self.dones_ph:np.zeros(self.state[0, None, 0].shape)[:,None]})
+        else:
+            outputs.append(self.policy_ff_acts)
+            a, v, s, ex = tf.get_default_session().run(outputs, {
+                self.observation_ph: observation[None, None],
+                self.state_in_ph: list(self.state[:, None, :]),
+                self.stochastic_ph: stochastic,
+                self.dones_ph:np.zeros(self.state[0, None, 0].shape)[:,None]})
+
+
         self.state = []
         for x in s:
             self.state.append(x.c[0])
@@ -439,7 +453,10 @@ class LSTMPolicy(Policy):
         self.state = np.array(self.state)
 
         # finish checking.
-        return a[0, ], {'vpred': v[0, 0], 'state': self.state}
+        if extra_op == None:
+            return a[0, ], {'vpred': v[0, 0], 'state': self.state}
+        else:
+            return a[0, ], {'vpred': v[0, 0], 'state': self.state}, ex[0, 0, ]
 
     def get_variables(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
@@ -501,3 +518,104 @@ class LSTMPolicy(Policy):
                                                         self.dones_ph: mask})[:,0]
 
 
+class Value(Policy):
+    def __init__(self,  sess, *, ob_space, hiddens):
+        self.recurrent = False
+        self.zero_state = np.zeros(1)
+        self.sess = sess
+
+        with tf.variable_scope("v", reuse=tf.AUTO_REUSE):
+            self.scope = tf.get_variable_scope().name
+
+            assert isinstance(ob_space, gym.spaces.Box)
+
+            self.observation_ph = tf.placeholder(tf.float32, [None] + list(ob_space.shape), name="observation")
+
+            last_out = self.observation_ph
+            for i, hid_size in enumerate(hiddens):
+                last_out = tf.nn.tanh(dense(last_out, hid_size, "vffc%i" % (i + 1)))
+            self.vpred = dense(last_out, 1, "vffinal")[:, 0]
+
+    def make_feed_dict(self, observation):
+        return {
+            self.observation_ph: observation
+        }
+
+    def value(self, observation):
+        outputs = [self.vpred]
+        v = self.sess.run(outputs, {
+            self.observation_ph: observation})
+        return v[0]
+
+
+# LSTM_Value
+class LSTM_Value(Policy):
+
+    def __init__(self, sess, *, ob_space, hiddens, num_env):
+        self.recurrent = True
+        self.num_env = num_env
+        self.sess = sess
+        # input is observation, state
+        with tf.variable_scope("v", reuse=tf.AUTO_REUSE):
+            self.scope = tf.get_variable_scope().name
+            assert isinstance(ob_space, gym.spaces.Box)
+
+            self.observation_ph = tf.placeholder(tf.float32, [None, None] + list(ob_space.shape), name="observation")
+            self.state_in_ph = []
+            self.state_out = []
+            self.zero_state = []
+            # define cell
+            cell = tf.contrib.rnn.BasicLSTMCell(hiddens[-1], reuse=tf.AUTO_REUSE)
+            size = cell.state_size
+            self.size = size
+
+            self.state_in_ph.append(tf.placeholder(tf.float32, [None, size.c], name="lstmv_c"))
+            self.state_in_ph.append(tf.placeholder(tf.float32, [None, size.h], name="lstmv_h"))
+
+            self.zero_state.append(np.zeros((num_env, size.c), dtype=np.float32))
+            self.zero_state.append(np.zeros((num_env, size.h), dtype=np.float32))
+
+            last_out = self.observation_ph
+            for hidden in hiddens[:-1]:
+                last_out = tf.contrib.layers.fully_connected(last_out, hidden)
+
+            cell = tf.contrib.rnn.BasicLSTMCell(hiddens[-1], reuse=tf.AUTO_REUSE)
+            initial_state = tf.contrib.rnn.LSTMStateTuple(self.state_in_ph[0], self.state_in_ph[1])
+            last_out, state_out = tf.nn.dynamic_rnn(cell, last_out, initial_state=initial_state, scope="lstmv")
+            self.state_out.append(state_out)
+
+            # remember the dimision, -> should change to one diminsion(batch_size)
+            vpredz = tf.contrib.layers.fully_connected(last_out, 1, activation_fn=None)[:, 0, 0]
+            self.vpred = vpredz
+
+            self.state_in_ph = tuple(self.state_in_ph)
+            self.zero_state = np.array(self.zero_state)
+            self.state = self.zero_state
+
+    # observation is t th observation
+    # dones is (t + 1) th dones
+    # if done, should reset the observation
+
+    def value(self, observation, dones):
+        outputs = [self.vpred, self.state_out]
+        opp_state = self.state.copy()
+        opp_state = np.swapaxes(opp_state, 0, 1)
+
+        v, s = self.sess.run(outputs, {
+            self.observation_ph: observation[:, None, :],
+            self.state_in_ph: list(self.state),
+            })
+        self.state = []
+
+        for x in s:
+            self.state.append(x.c)
+            self.state.append(x.h)
+        self.state = np.array(self.state)
+
+        # state dim id 2 batch_size * dim
+        for i in range(self.num_env):
+            if dones[i]:
+                # reset c and h
+                self.state[0,i] = np.zeros(self.size.c)
+                self.state[1,i] = np.zeros(self.size.h)
+        return v, opp_state

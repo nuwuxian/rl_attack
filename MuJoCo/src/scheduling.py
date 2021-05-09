@@ -126,6 +126,9 @@ class LinearAnnealer(Annealer):
         if self.end_frac == 0:
             anneal_progress = 1.0
         else:
+            # print('*******************')
+            # print(frac_remaining)
+            # print('*******************')
             anneal_progress = min(1.0, (1 - frac_remaining) / self.end_frac)
         return (1 - anneal_progress) * self.start_val + anneal_progress * self.end_val
 

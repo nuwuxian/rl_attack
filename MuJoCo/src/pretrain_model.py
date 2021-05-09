@@ -145,7 +145,3 @@ if __name__ == "__main__":
 
     with open('../saved/mimic_model.pkl', 'ab+') as f:
         pkl.dump(flat_param, f, protocol=2)
-
-
-
-
