@@ -1,4 +1,4 @@
-tensorflow==1.14.0
+tensorflow==2.5.3
 numpy>=1.15
 gym==0.15.4 
 stable_baselines==2.5.1
